@@ -1,0 +1,99 @@
+name: token-farmer
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    env_file: ${ENV_FILE:-.env.production}
+    volumes:
+      - ${DATA_ROOT:-/opt/token-farmer}/data/postgres:/var/lib/postgresql/data
+      - ${DATA_ROOT:-/opt/token-farmer}/backups:/backups
+    networks: [data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - ${DATA_ROOT:-/opt/token-farmer}/data/redis:/data
+    networks: [data]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    image: ${API_IMAGE:-token-farmer-api:local}
+    restart: 'no'
+    env_file: ${ENV_FILE:-.env.production}
+    command: ['pnpm', 'db:deploy']
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [data]
+
+  api:
+    image: ${API_IMAGE:-token-farmer-api:local}
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.api
+    restart: unless-stopped
+    env_file: ${ENV_FILE:-.env.production}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    networks: [edge, data]
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:4000/health/ready']
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    image: ${WORKER_IMAGE:-token-farmer-worker:local}
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.worker
+    restart: unless-stopped
+    env_file: ${ENV_FILE:-.env.production}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [data]
+
+  web:
+    image: ${WEB_IMAGE:-token-farmer-web:local}
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    networks: [edge]
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${DATA_ROOT:-/opt/token-farmer}/data/caddy:/data
+      - ${DATA_ROOT:-/opt/token-farmer}/config/caddy:/config
+    depends_on: [api, web]
+    networks: [edge]
+
+networks:
+  edge:
+  data:
+    internal: true

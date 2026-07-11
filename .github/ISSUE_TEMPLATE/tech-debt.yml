@@ -1,0 +1,52 @@
+name: Technical debt
+description: Track a bounded cleanup with impact and verifiable completion criteria.
+title: '[Tech debt] '
+labels:
+  - tech-debt
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Technical debt is scheduled work, not an unbounded request to "refactor". Link TODOs as `TODO(#issue-number): reason`.
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: Describe the current user, reliability, security, delivery, or maintenance cost.
+    validations:
+      required: true
+  - type: textarea
+    id: location
+    attributes:
+      label: Location and ownership
+      description: Name the domain module, paths, and owning boundary.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Include duplication, complexity, slow-query evidence, dependency age, or incident/test references.
+    validations:
+      required: true
+  - type: textarea
+    id: protection_gap
+    attributes:
+      label: Missing protection
+      description: Which test, constraint, metric, or CI gate is absent or insufficient?
+    validations:
+      required: true
+  - type: textarea
+    id: completion
+    attributes:
+      label: Completion criteria
+      description: List observable, testable conditions that close this issue.
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Change safety
+      description: Describe compatibility, migration, rollout, and rollback constraints.
+    validations:
+      required: true

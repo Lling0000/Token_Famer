@@ -1,0 +1,10 @@
+packages:
+  - apps/*
+  - modules/*
+  - packages/*
+
+onlyBuiltDependencies:
+  - '@scarf/scarf'
+  - better-sqlite3
+  - esbuild
+  - sharp

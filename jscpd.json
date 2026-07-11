@@ -1,0 +1,15 @@
+{
+  "threshold": 3,
+  "minLines": 8,
+  "minTokens": 60,
+  "reporters": ["console"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "database/migrations/**",
+    "**/*.config.*",
+    "apps/web/public/assets/**"
+  ]
+}
