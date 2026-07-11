@@ -9,7 +9,12 @@ test('opens a playable desktop farm from demo mode', async ({ page }) => {
   await expect(page.getByRole('button', { name: '一键收获' })).toBeVisible();
   const canvas = page.getByLabel('24格等距 Token 农场');
   await expect(canvas).toHaveAttribute('data-land-layout', 'ground-anchored');
+  await expect(canvas).toHaveAttribute('data-selection-style', 'edge-glow');
   await expect(canvas).toHaveAttribute('draggable', 'false');
+  await expect(page.locator('.plot-inspector')).toHaveCount(0);
+  await expect(page.locator('.selected-seed-hud')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '让巡逻萌犬叫一声' })).toBeVisible();
+  await expect(page.locator('.stream-glint')).toHaveCount(3);
   await expect(
     page.getByRole('button', { name: '浇水' }).locator('.lucide-paint-bucket'),
   ).toBeVisible();
@@ -22,6 +27,32 @@ test('opens a playable desktop farm from demo mode', async ({ page }) => {
   await page.getByRole('button', { name: '播种' }).click();
   await expect(page.getByRole('dialog', { name: '选择要播种的花种' })).toBeVisible();
   await expect(page.getByRole('button', { name: /ChatGPT 花苗.*免费/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: '下一页花种' })).toBeEnabled();
+});
+
+test('shows a tool cursor on land and plot details only after a plot click', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '进入演示农场' }).click();
+  const canvas = page.getByLabel('24格等距 Token 农场');
+  const box = await canvas.boundingBox();
+  expect(box).not.toBeNull();
+  const scale = Math.max(box!.width / 1536, box!.height / 1024);
+  const center = {
+    x: (box!.width - 1536 * scale) / 2 + 834 * scale,
+    y: (box!.height - 1024 * scale) / 2 + 245 * scale,
+  };
+
+  await page.getByRole('button', { name: '浇水' }).click();
+  await expect(canvas).toHaveAttribute('data-active-tool', 'water');
+  await page.mouse.move(box!.x + center.x, box!.y + center.y);
+  await expect(page.locator('.farm-tool-cursor[data-tool="water"]')).toBeVisible();
+  expect(await canvas.evaluate((element) => getComputedStyle(element).cursor)).toBe('none');
+
+  await page.locator('.tool-button').nth(0).click();
+  await canvas.click({ position: center });
+  await expect(page.locator('.plot-inspector')).toBeVisible();
+  await canvas.click({ position: { x: 8, y: 8 } });
+  await expect(page.locator('.plot-inspector')).toHaveCount(0);
 });
 
 test('uses branded model picker and supports profile and sidebar controls', async ({ page }) => {

@@ -17,8 +17,8 @@ export function useGameAudio(active: boolean) {
     if (!active) return;
     const playButtonClick = (event: PointerEvent) => {
       const target = event.target as HTMLElement | null;
-      if (!target?.closest('button, [role="button"]')) return;
-      ensureEngine().playClick();
+      const engine = ensureEngine();
+      if (target?.closest('button, [role="button"]')) engine.playClick();
     };
     document.addEventListener('pointerdown', playButtonClick, true);
     return () => document.removeEventListener('pointerdown', playButtonClick, true);

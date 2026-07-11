@@ -3,11 +3,10 @@
 import { AlertTriangle, CloudSun, Droplets, Layers3, Sprout } from 'lucide-react';
 import { getCrop, getModel } from '@/lib/game-data';
 import { getPlotPhase, getPlotProgress } from '@/lib/game-engine';
-import type { CropDefinition, FarmPlot } from '@/lib/game-types';
+import type { FarmPlot } from '@/lib/game-types';
 
 interface FarmHudProps {
   plots: FarmPlot[];
-  selectedCrop: CropDefinition;
   selectedPlot: FarmPlot | null;
   nowMs: number;
   farmName?: string;
@@ -25,7 +24,6 @@ const PHASE_LABEL = {
 
 export function FarmHud({
   plots,
-  selectedCrop,
   selectedPlot,
   nowMs,
   farmName = '晨露 Token 农场',
@@ -58,13 +56,6 @@ export function FarmHud({
         <span>
           <strong>晴 · 24°C</strong>
           <small>成长速度正常</small>
-        </span>
-      </div>
-      <div className="selected-seed-hud">
-        <span className="seed-swatch" style={{ backgroundColor: selectedCrop.color }} />
-        <span>
-          <small>当前花种</small>
-          <strong>{selectedCrop.name}</strong>
         </span>
       </div>
       {selectedPlot && <PlotInspector plot={selectedPlot} nowMs={nowMs} />}

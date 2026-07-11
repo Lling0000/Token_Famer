@@ -38,7 +38,7 @@ export function TokenFarmerApp() {
   const [modelId, setModelId] = useState<ModelId>('gpt-5.4-mini');
   const [balance, setBalance] = useState(WELCOME_BALANCE);
   const [plots, setPlots] = useState<FarmPlot[]>(() => createFarmPlots(currentUtcMs()));
-  const [selectedPlotId, setSelectedPlotId] = useState<number | null>(1);
+  const [selectedPlotId, setSelectedPlotId] = useState<number | null>(null);
   const [selectedCrop, setSelectedCrop] = useState(CROPS[0]);
   const [activeTool, setActiveTool] = useState<FarmTool>('inspect');
   const [panel, setPanel] = useState<GamePanel>(null);
@@ -70,13 +70,13 @@ export function TokenFarmerApp() {
     const timeout = window.setTimeout(() => {
       if (farmDestination === 'home') {
         setVisitingFriend(null);
-        setSelectedPlotId(1);
+        setSelectedPlotId(null);
         setToast('已返回自己的农场');
       } else {
         setVisitingFriend(farmDestination);
         setFriendPlots(createFarmPlots(currentUtcMs(), true));
         setVisitorAction('inspect');
-        setSelectedPlotId(1);
+        setSelectedPlotId(null);
         setToast(`已到达 ${farmDestination.name} 的农场`);
       }
       setFarmDestination(null);
@@ -89,7 +89,6 @@ export function TokenFarmerApp() {
     () => visiblePlots.find((plot) => plot.id === selectedPlotId) ?? null,
     [visiblePlots, selectedPlotId],
   );
-
   const enterDemo = () => {
     const currentTime = currentUtcMs();
     setNickname('演示农场主');
@@ -127,8 +126,9 @@ export function TokenFarmerApp() {
     setToast('统一 Token Credit 余额获得 80K 首次赠送');
   };
 
-  const handlePlotClick = (plotId: number) => {
+  const handlePlotClick = (plotId: number | null) => {
     setSelectedPlotId(plotId);
+    if (plotId === null) return;
     if (visitingFriend) {
       handleFriendPlotClick(plotId, visitingFriend);
       return;
@@ -305,16 +305,15 @@ export function TokenFarmerApp() {
             <main className={sidebarCollapsed ? 'game-main sidebar-collapsed' : 'game-main'}>
               <section className="farm-stage">
                 <div className="farm-backdrop" aria-hidden="true" />
-                <FarmDecoration decoration={shop.equippedDecoration} />
+                <FarmDecoration decoration={shop.equippedDecoration} onDogBark={playDogBark} />
                 <FarmCanvas
                   plots={visiblePlots}
+                  activeTool={activeTool}
                   selectedPlotId={selectedPlotId}
                   onPlotClick={handlePlotClick}
-                  onPlotHover={() => undefined}
                 />
                 <FarmHud
                   plots={visiblePlots}
-                  selectedCrop={selectedCrop}
                   selectedPlot={selectedPlot}
                   nowMs={nowMs}
                   farmName={

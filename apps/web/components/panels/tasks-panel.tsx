@@ -43,7 +43,7 @@ export function TasksPanel({
     <PanelShell
       eyebrow="DAILY ROUTINE"
       title="今日任务"
-      description="每天 00:00（Asia/Shanghai）刷新，完成后领取统一余额 Token。"
+      description="每天 00:00 刷新，完成后领取统一余额 Token。"
       onClose={onClose}
     >
       <div className="checkin-strip">

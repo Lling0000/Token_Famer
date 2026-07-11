@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   color-scheme: light;
   --ink: #17261f;
   --muted: #63736a;
@@ -87,7 +87,7 @@ select:focus-visible {
   color: #173f2f;
   background: #f3ca51;
   border: 2px solid #183e30;
-  border-radius: 6px;
+  border-radius: 3px;
   box-shadow: 3px 3px 0 #102d23;
 }
 .sandbox-label,
@@ -110,13 +110,13 @@ select:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border-radius: 6px;
+  border-radius: 2px;
   font-weight: 700;
 }
 .primary-command {
   color: #fff;
   background: var(--green);
-  border: 1px solid #194b38;
+  border: 2px solid #194b38;
   box-shadow: 0 3px 0 #153e30;
 }
 .primary-command:hover {
@@ -125,7 +125,7 @@ select:focus-visible {
 .secondary-command {
   color: #264f3e;
   background: #f2f4e7;
-  border: 1px solid #c8d0bd;
+  border: 2px solid #c8d0bd;
   padding: 0 13px;
 }
 .secondary-command:hover {
@@ -145,7 +145,7 @@ select:focus-visible {
   color: #486156;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 2px;
 }
 .icon-button:hover {
   color: var(--green);
@@ -164,8 +164,8 @@ select:focus-visible {
   display: inline-flex;
   padding: 3px;
   background: #e5e8da;
-  border: 1px solid #d1d5c6;
-  border-radius: 6px;
+  border: 2px solid #c5ccbc;
+  border-radius: 2px;
 }
 .segmented-control button {
   min-height: 32px;
@@ -173,14 +173,14 @@ select:focus-visible {
   color: #627168;
   background: transparent;
   border: 0;
-  border-radius: 4px;
+  border-radius: 1px;
   font-size: 12px;
   font-weight: 700;
 }
 .segmented-control button.active {
   color: #214d3b;
   background: #fffef7;
-  box-shadow: 0 1px 3px rgba(23, 38, 31, 0.12);
+  box-shadow: inset 0 -3px 0 #c6d7bf;
 }
 .field-label {
   display: grid;
@@ -198,7 +198,7 @@ select:focus-visible {
   color: #708078;
   background: rgba(255, 255, 250, 0.92);
   border: 1px solid #bec8ba;
-  border-radius: 6px;
+  border-radius: 3px;
 }
 .field-control:focus-within {
   border-color: #3e8a65;
@@ -244,7 +244,7 @@ select:focus-visible {
 ::-webkit-scrollbar-thumb {
   background: #9bac9e;
   border: 2px solid transparent;
-  border-radius: 8px;
+  border-radius: 3px;
   background-clip: content-box;
 }
 

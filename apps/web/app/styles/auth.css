@@ -1,4 +1,4 @@
-.auth-screen,
+﻿.auth-screen,
 .onboarding-screen {
   position: relative;
   width: 100%;
@@ -14,7 +14,7 @@
   z-index: -2;
   inset: 0;
   content: '';
-  background: #557a4a url('/assets/token-farm-background.png') center / cover no-repeat;
+  background: #557a4a url('/assets/token-farm-background-animated.webp') center / cover no-repeat;
 }
 .auth-screen::after,
 .onboarding-screen::after {
@@ -91,7 +91,7 @@
   color: var(--ink);
   background: rgba(250, 249, 238, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 8px;
+  border-radius: 3px;
   box-shadow:
     12px 14px 0 rgba(16, 47, 34, 0.44),
     var(--shadow);
@@ -187,7 +187,7 @@
   color: var(--ink);
   background: rgba(248, 247, 235, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.72);
-  border-radius: 8px;
+  border-radius: 3px;
   box-shadow: 10px 11px 0 rgba(18, 49, 36, 0.38);
 }
 .grant-stamp {
@@ -243,7 +243,7 @@
   color: var(--ink);
   background: rgba(250, 249, 238, 0.97);
   border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 8px;
+  border-radius: 3px;
   box-shadow: var(--shadow);
 }
 .model-choice {
@@ -269,7 +269,7 @@
   color: #58675f;
   background: #f1f2e7;
   border: 1px solid #d2d7c9;
-  border-radius: 5px;
+  border-radius: 3px;
   font-size: 12px;
   font-weight: 700;
 }

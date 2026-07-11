@@ -1,17 +1,27 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { MousePointer2, PaintBucket, Shovel, SprayCan, Sprout, Wheat } from 'lucide-react';
 import { getCrop, getModel } from '@/lib/game-data';
 import { getPlotPhase, getPlotProgress } from '@/lib/game-engine';
-import type { FarmPlot } from '@/lib/game-types';
+import type { FarmPlot, FarmTool } from '@/lib/game-types';
 import { drawLock, drawModelBloom } from './model-bloom';
 
 interface FarmCanvasProps {
   plots: FarmPlot[];
+  activeTool: FarmTool;
   selectedPlotId: number | null;
-  onPlotClick: (plotId: number) => void;
-  onPlotHover: (plotId: number | null) => void;
+  onPlotClick: (plotId: number | null) => void;
 }
+
+const TOOL_CURSOR_ICONS = {
+  inspect: MousePointer2,
+  seed: Sprout,
+  water: PaintBucket,
+  weed: Shovel,
+  bug: SprayCan,
+  harvest: Wheat,
+} as const;
 
 interface ViewState {
   width: number;
@@ -37,6 +47,7 @@ const BACKGROUND_WIDTH = 1536;
 const BACKGROUND_HEIGHT = 1024;
 const BACKGROUND_PLOT_ORIGIN = { x: 834, y: 245 };
 const BACKGROUND_GRID_STEP = { x: 119, y: 60 };
+const PLOT_HALF_SIZE = BACKGROUND_GRID_STEP;
 const BACKGROUND_PLOT_CENTERS = Array.from({ length: 25 }, (_, index) => {
   const row = Math.floor(index / 5);
   const column = index % 5;
@@ -47,16 +58,19 @@ const BACKGROUND_PLOT_CENTERS = Array.from({ length: 25 }, (_, index) => {
 }).filter((_, index) => index !== 12);
 
 // eslint-disable-next-line max-lines-per-function -- Canvas lifecycle keeps pointer input, sizing, and the animation frame synchronized in one effect.
-export function FarmCanvas({ plots, selectedPlotId, onPlotClick, onPlotHover }: FarmCanvasProps) {
+export function FarmCanvas({ plots, activeTool, selectedPlotId, onPlotClick }: FarmCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const cursorRef = useRef<HTMLSpanElement>(null);
   const plotsRef = useRef(plots);
+  const activeToolRef = useRef(activeTool);
   const selectedRef = useRef(selectedPlotId);
-  const callbacksRef = useRef({ onPlotClick, onPlotHover });
+  const onPlotClickRef = useRef(onPlotClick);
   const viewRef = useRef<ViewState>({ ...INITIAL_VIEW });
 
   plotsRef.current = plots;
+  activeToolRef.current = activeTool;
   selectedRef.current = selectedPlotId;
-  callbacksRef.current = { onPlotClick, onPlotHover };
+  onPlotClickRef.current = onPlotClick;
 
   // eslint-disable-next-line max-lines-per-function -- One canvas lifecycle owns listeners, resize state, and animation cleanup.
   useEffect(() => {
@@ -94,22 +108,28 @@ export function FarmCanvas({ plots, selectedPlotId, onPlotClick, onPlotHover }: 
       const point = pointerPosition(event);
       const view = viewRef.current;
       const hit = hitTestPlot(point.x, point.y, view, plotsRef.current);
+      const cursor = cursorRef.current;
+      if (cursor) {
+        cursor.style.display =
+          activeToolRef.current === 'inspect' || hit === null ? 'none' : 'grid';
+        cursor.style.transform = `translate3d(${point.x + 10}px, ${point.y + 10}px, 0)`;
+      }
       if (hit !== view.hoverId) {
         view.hoverId = hit;
-        callbacksRef.current.onPlotHover(hit);
-        canvas.style.cursor = hit === null ? 'default' : 'pointer';
+        canvas.style.cursor =
+          activeToolRef.current === 'inspect' && hit !== null ? 'pointer' : 'default';
       }
     };
     const handleClick = (event: PointerEvent) => {
       const point = pointerPosition(event);
       const view = viewRef.current;
       const hit = hitTestPlot(point.x, point.y, view, plotsRef.current);
-      if (hit !== null) callbacksRef.current.onPlotClick(hit);
+      onPlotClickRef.current(hit);
     };
     const handlePointerLeave = () => {
       viewRef.current.hoverId = null;
       canvas.style.cursor = 'default';
-      callbacksRef.current.onPlotHover(null);
+      if (cursorRef.current) cursorRef.current.style.display = 'none';
     };
 
     canvas.addEventListener('pointermove', handlePointerMove);
@@ -124,14 +144,22 @@ export function FarmCanvas({ plots, selectedPlotId, onPlotClick, onPlotHover }: 
     };
   }, []);
 
+  const CursorIcon = TOOL_CURSOR_ICONS[activeTool];
   return (
-    <canvas
-      ref={canvasRef}
-      className="farm-canvas"
-      aria-label="24格等距 Token 农场"
-      data-land-layout="ground-anchored"
-      draggable={false}
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        className="farm-canvas"
+        aria-label="24格等距 Token 农场"
+        data-active-tool={activeTool}
+        data-land-layout="ground-anchored"
+        data-selection-style="edge-glow"
+        draggable={false}
+      />
+      <span ref={cursorRef} className="farm-tool-cursor" data-tool={activeTool} aria-hidden="true">
+        <CursorIcon size={22} strokeWidth={2.4} />
+      </span>
+    </>
   );
 }
 
@@ -140,8 +168,8 @@ function projection(view: ViewState): Projection {
   return {
     offsetX: (view.width - BACKGROUND_WIDTH * scale) / 2,
     offsetY: (view.height - BACKGROUND_HEIGHT * scale) / 2,
-    tileWidth: 196 * scale,
-    tileHeight: 86 * scale,
+    tileWidth: PLOT_HALF_SIZE.x * 2 * scale,
+    tileHeight: PLOT_HALF_SIZE.y * 2 * scale,
     scale,
   };
 }
@@ -160,8 +188,8 @@ function hitTestPlot(x: number, y: number, view: ViewState, plots: FarmPlot[]): 
     const plot = plots[index];
     const center = plotCenter(plot, project);
     const normalized =
-      Math.abs(x - center.x) / (project.tileWidth * 0.48) +
-      Math.abs(y - center.y) / (project.tileHeight * 0.48);
+      Math.abs(x - center.x) / (project.tileWidth / 2) +
+      Math.abs(y - center.y) / (project.tileHeight / 2);
     if (normalized <= 1) return plot.id;
   }
   return null;
@@ -182,7 +210,7 @@ function drawFarm(
   for (const plot of ordered) drawPlot(context, plot, project, selectedPlotId, view.hoverId, time);
 }
 
-// eslint-disable-next-line max-params, complexity -- Canvas drawing keeps scalar hot-path coordinates allocation-free.
+// eslint-disable-next-line max-params -- Canvas drawing keeps scalar hot-path coordinates allocation-free.
 function drawPlot(
   context: CanvasRenderingContext2D,
   plot: FarmPlot,
@@ -192,17 +220,23 @@ function drawPlot(
   time: number,
 ) {
   const center = plotCenter(plot, project);
-  const halfWidth = project.tileWidth * 0.46;
-  const halfHeight = project.tileHeight * 0.46;
+  const halfWidth = project.tileWidth / 2;
+  const halfHeight = project.tileHeight / 2;
   const highlighted = plot.id === selectedPlotId || plot.id === hoverId;
   if (!plot.unlocked) {
     context.fillStyle = 'rgba(44, 61, 52, .58)';
     fillDiamond(context, center.x, center.y, halfWidth, halfHeight);
   }
   if (highlighted) {
-    context.strokeStyle = plot.id === selectedPlotId ? '#ffd45f' : 'rgba(255,255,255,.7)';
-    context.lineWidth = plot.id === selectedPlotId ? 3 : 2;
-    strokeDiamond(context, center.x, center.y, halfWidth, halfHeight);
+    drawPlotHighlight(
+      context,
+      center.x,
+      center.y,
+      halfWidth,
+      halfHeight,
+      plot.id === selectedPlotId,
+      project.scale,
+    );
   }
   if (!plot.unlocked) drawLock(context, center.x, center.y - 2, project.scale);
   if (plot.watered && plot.unlocked)
@@ -250,6 +284,28 @@ function strokeDiamond(
   context.stroke();
 }
 
+// eslint-disable-next-line max-params -- Canvas highlight drawing uses scalar geometry in the render hot path.
+function drawPlotHighlight(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  selected: boolean,
+  scale: number,
+) {
+  context.save();
+  context.lineJoin = 'miter';
+  context.strokeStyle = selected ? '#ffe681' : 'rgba(255, 255, 255, .72)';
+  context.lineWidth = (selected ? 3 : 2) * Math.max(1, scale);
+  if (selected) {
+    context.shadowColor = '#ffd45f';
+    context.shadowBlur = 12 * Math.max(1, scale);
+  }
+  strokeDiamond(context, x, y, width, height);
+  context.restore();
+}
+
 // eslint-disable-next-line max-params -- Animated water rendering uses scalar geometry every frame.
 function drawWater(
   context: CanvasRenderingContext2D,
@@ -259,9 +315,24 @@ function drawWater(
   height: number,
   time: number,
 ) {
-  context.strokeStyle = `rgba(72, 176, 190, ${0.2 + Math.sin(time / 550) * 0.06})`;
-  context.lineWidth = 3;
-  strokeDiamond(context, x, y, width * 0.84, height * 0.84);
+  const alpha = 0.34 + Math.sin(time / 550) * 0.07;
+  context.save();
+  context.fillStyle = `rgba(117, 222, 236, ${alpha})`;
+  const droplets = [
+    { x: -0.52, y: -0.08 },
+    { x: 0.45, y: 0.12 },
+    { x: 0.12, y: 0.55 },
+  ];
+  for (const droplet of droplets) {
+    const size = Math.max(2, width * 0.025);
+    context.fillRect(
+      x + width * droplet.x - size / 2,
+      y + height * droplet.y - size,
+      size,
+      size * 2,
+    );
+  }
+  context.restore();
 }
 
 // eslint-disable-next-line max-lines-per-function, max-params -- Crop rendering is one per-frame pixel drawing primitive.

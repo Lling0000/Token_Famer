@@ -9,18 +9,31 @@ interface ToneOptions {
   output: AudioNode;
 }
 
+const FARM_MELODIES = [
+  [659.25, 783.99, 880, 783.99, 659.25, 587.33, 659.25, 523.25],
+  [587.33, 659.25, 783.99, 880, 783.99, 659.25, 587.33, 523.25],
+];
+const FARM_BASS = [130.81, 98, 110, 87.31];
+const FARM_CHORDS = [
+  [261.63, 329.63, 392],
+  [196, 246.94, 392],
+  [220, 261.63, 329.63],
+  [174.61, 261.63, 349.23],
+];
+
 export class FarmAudioEngine {
   private readonly context = new AudioContext();
   private readonly master = this.context.createGain();
   private readonly music = this.context.createGain();
   private readonly effects = this.context.createGain();
   private musicTimer: number | null = null;
+  private musicBar = 0;
   private muted = false;
 
   constructor() {
     this.master.gain.value = 0.72;
-    this.music.gain.value = 0.045;
-    this.effects.gain.value = 0.14;
+    this.music.gain.value = 0.13;
+    this.effects.gain.value = 0.16;
     this.music.connect(this.master);
     this.effects.connect(this.master);
     this.master.connect(this.context.destination);
@@ -30,7 +43,7 @@ export class FarmAudioEngine {
     if (this.context.state === 'suspended') await this.context.resume();
     if (this.musicTimer !== null) return;
     this.scheduleMusicBar();
-    this.musicTimer = window.setInterval(() => this.scheduleMusicBar(), 4_800);
+    this.musicTimer = window.setInterval(() => this.scheduleMusicBar(), 7_680);
   }
 
   setMuted(muted: boolean): void {
@@ -95,16 +108,80 @@ export class FarmAudioEngine {
   private scheduleMusicBar(): void {
     if (this.muted) return;
     const start = this.context.currentTime + 0.08;
-    const melody = [523.25, 659.25, 783.99, 659.25, 587.33, 698.46, 783.99, 880];
+    const step = 0.48;
+    const melody = FARM_MELODIES[this.musicBar % FARM_MELODIES.length]!;
+    this.scheduleMelody(melody, start, step);
+    this.scheduleHarmony(start, step);
+    this.scheduleBeat(start, step);
+    this.scheduleBirdChirp(start + step * (this.musicBar % 2 === 0 ? 6 : 13));
+    this.musicBar += 1;
+  }
+
+  private scheduleMelody(melody: number[], start: number, step: number): void {
     melody.forEach((frequency, index) => {
       this.tone({
         frequency,
-        start: start + index * 0.56,
-        duration: 0.28,
-        volume: index % 4 === 0 ? 0.17 : 0.11,
+        start: start + index * step * 2,
+        duration: 0.32,
+        volume: index % 4 === 0 ? 0.2 : 0.14,
         type: 'triangle',
         output: this.music,
       });
+    });
+  }
+
+  private scheduleHarmony(start: number, step: number): void {
+    FARM_CHORDS.forEach((chord, chordIndex) => {
+      this.tone({
+        frequency: FARM_BASS[chordIndex]!,
+        start: start + chordIndex * step * 4,
+        duration: 0.7,
+        volume: 0.08,
+        type: 'square',
+        output: this.music,
+      });
+      chord.forEach((frequency, noteIndex) =>
+        this.tone({
+          frequency,
+          start: start + chordIndex * step * 4 + noteIndex * step,
+          duration: 0.3,
+          volume: 0.07,
+          type: 'sine',
+          output: this.music,
+        }),
+      );
+    });
+  }
+
+  private scheduleBeat(start: number, step: number): void {
+    [0, 4, 8, 12].forEach((beat) => {
+      this.tone({
+        frequency: 92,
+        start: start + beat * step,
+        duration: 0.08,
+        volume: 0.055,
+        type: 'sine',
+        output: this.music,
+      });
+    });
+  }
+
+  private scheduleBirdChirp(start: number): void {
+    this.tone({
+      frequency: 1_320,
+      start,
+      duration: 0.08,
+      volume: 0.045,
+      type: 'sine',
+      output: this.music,
+    });
+    this.tone({
+      frequency: 1_680,
+      start: start + 0.09,
+      duration: 0.07,
+      volume: 0.035,
+      type: 'sine',
+      output: this.music,
     });
   }
 
