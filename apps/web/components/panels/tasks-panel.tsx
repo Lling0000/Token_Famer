@@ -1,7 +1,8 @@
 'use client';
 
 import { CalendarCheck, Check, Gift, Sprout, Users, Wheat } from 'lucide-react';
-import { useState } from 'react';
+import { GAME_CONFIG_V1, getDailyTaskReward } from '@/lib/game-config-v1';
+import { formatTokenAmount } from '@/lib/game-engine';
 import { PanelShell } from './panel-shell';
 
 const TASKS = [
@@ -10,7 +11,6 @@ const TASKS = [
     title: '播种 3 块土地',
     progress: '2 / 3',
     percent: 67,
-    reward: '80 花瓣',
     Icon: Sprout,
   },
   {
@@ -18,7 +18,6 @@ const TASKS = [
     title: '完成一次收获',
     progress: '1 / 1',
     percent: 100,
-    reward: '120 花瓣',
     Icon: Wheat,
   },
   {
@@ -26,26 +25,32 @@ const TASKS = [
     title: '帮助 2 位好友',
     progress: '0 / 2',
     percent: 0,
-    reward: '20 亲密度',
     Icon: Users,
   },
 ];
 
 // eslint-disable-next-line max-lines-per-function -- Repeated task rows remain together as one data-driven presentation.
-export function TasksPanel({ onClose }: { onClose: () => void }) {
-  const [claimed, setClaimed] = useState<string[]>([]);
+export function TasksPanel({
+  claimedTaskIds,
+  onClaimTask,
+  onClose,
+}: {
+  claimedTaskIds: readonly string[];
+  onClaimTask: (taskId: string, rewardToken: bigint) => void;
+  onClose: () => void;
+}) {
   return (
     <PanelShell
       eyebrow="DAILY ROUTINE"
       title="今日任务"
-      description="每天 00:00（Asia/Shanghai）刷新，不奖励可交易 Token。"
+      description="每天 00:00（Asia/Shanghai）刷新，完成后领取统一余额 Token。"
       onClose={onClose}
     >
       <div className="checkin-strip">
         <CalendarCheck size={24} />
         <span>
           <strong>连续签到 4 天</strong>
-          <small>明日奖励：像素头像框碎片 ×1</small>
+          <small>明日奖励：{formatTokenAmount(GAME_CONFIG_V1.nextCheckinRewardToken)} Token</small>
         </span>
         <div className="checkin-days">
           {[1, 2, 3, 4, 5, 6, 7].map((day) => (
@@ -60,9 +65,11 @@ export function TasksPanel({ onClose }: { onClose: () => void }) {
         </button>
       </div>
       <div className="task-list">
-        {TASKS.map(({ id, title, progress, percent, reward, Icon }) => {
+        {TASKS.map(({ id, title, progress, percent, Icon }) => {
           const complete = percent === 100;
-          const isClaimed = claimed.includes(id);
+          const isClaimed = claimedTaskIds.includes(id);
+          const reward = getDailyTaskReward(id);
+          if (!reward) return null;
           return (
             <div className="task-row" key={id}>
               <span className="task-icon">
@@ -77,7 +84,8 @@ export function TasksPanel({ onClose }: { onClose: () => void }) {
               </span>
               <span className="task-reward">
                 <Gift size={15} />
-                {reward}
+                {formatTokenAmount(reward.rewardToken)} Token
+                {reward.rewardIntimacy > 0 && ` + ${reward.rewardIntimacy} 亲密度`}
               </span>
               <button
                 className={
@@ -85,7 +93,7 @@ export function TasksPanel({ onClose }: { onClose: () => void }) {
                 }
                 type="button"
                 disabled={!complete || isClaimed}
-                onClick={() => setClaimed((items) => [...items, id])}
+                onClick={() => onClaimTask(id, reward.rewardToken)}
               >
                 {isClaimed ? '已领取' : complete ? '领取' : '进行中'}
               </button>
@@ -104,7 +112,7 @@ export function TasksPanel({ onClose }: { onClose: () => void }) {
         <strong>310 / 500</strong>
         <span className="weekly-chest">
           <Gift size={20} />
-          头像框
+          {formatTokenAmount(GAME_CONFIG_V1.weeklyRewardToken)} Token
         </span>
       </div>
     </PanelShell>

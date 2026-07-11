@@ -16,36 +16,35 @@ interface FarmCanvasProps {
 interface ViewState {
   width: number;
   height: number;
-  zoom: number;
-  panX: number;
-  panY: number;
   hoverId: number | null;
-  dragging: boolean;
-  moved: boolean;
-  pointerX: number;
-  pointerY: number;
 }
 
 interface Projection {
-  originX: number;
-  originY: number;
+  offsetX: number;
+  offsetY: number;
   tileWidth: number;
   tileHeight: number;
-  zoom: number;
+  scale: number;
 }
 
 const INITIAL_VIEW: ViewState = {
   width: 1,
   height: 1,
-  zoom: 1,
-  panX: 0,
-  panY: 0,
   hoverId: null,
-  dragging: false,
-  moved: false,
-  pointerX: 0,
-  pointerY: 0,
 };
+
+const BACKGROUND_WIDTH = 1536;
+const BACKGROUND_HEIGHT = 1024;
+const BACKGROUND_PLOT_ORIGIN = { x: 834, y: 245 };
+const BACKGROUND_GRID_STEP = { x: 119, y: 60 };
+const BACKGROUND_PLOT_CENTERS = Array.from({ length: 25 }, (_, index) => {
+  const row = Math.floor(index / 5);
+  const column = index % 5;
+  return {
+    x: BACKGROUND_PLOT_ORIGIN.x + (column - row) * BACKGROUND_GRID_STEP.x,
+    y: BACKGROUND_PLOT_ORIGIN.y + (column + row) * BACKGROUND_GRID_STEP.y,
+  };
+}).filter((_, index) => index !== 12);
 
 // eslint-disable-next-line max-lines-per-function -- Canvas lifecycle keeps pointer input, sizing, and the animation frame synchronized in one effect.
 export function FarmCanvas({ plots, selectedPlotId, onPlotClick, onPlotHover }: FarmCanvasProps) {
@@ -87,92 +86,71 @@ export function FarmCanvas({ plots, selectedPlotId, onPlotClick, onPlotHover }: 
     };
     animationFrame = requestAnimationFrame(drawFrame);
 
-    const pointerPosition = (event: PointerEvent | WheelEvent) => {
+    const pointerPosition = (event: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
       return { x: event.clientX - rect.left, y: event.clientY - rect.top };
-    };
-    const handlePointerDown = (event: PointerEvent) => {
-      const point = pointerPosition(event);
-      const view = viewRef.current;
-      view.dragging = true;
-      view.moved = false;
-      view.pointerX = point.x;
-      view.pointerY = point.y;
-      canvas.setPointerCapture(event.pointerId);
     };
     const handlePointerMove = (event: PointerEvent) => {
       const point = pointerPosition(event);
       const view = viewRef.current;
-      if (view.dragging) {
-        const deltaX = point.x - view.pointerX;
-        const deltaY = point.y - view.pointerY;
-        if (Math.abs(deltaX) + Math.abs(deltaY) > 2) view.moved = true;
-        view.panX += deltaX;
-        view.panY += deltaY;
-        view.pointerX = point.x;
-        view.pointerY = point.y;
-        return;
-      }
       const hit = hitTestPlot(point.x, point.y, view, plotsRef.current);
       if (hit !== view.hoverId) {
         view.hoverId = hit;
         callbacksRef.current.onPlotHover(hit);
-        canvas.style.cursor = hit === null ? 'grab' : 'pointer';
+        canvas.style.cursor = hit === null ? 'default' : 'pointer';
       }
     };
-    const handlePointerUp = (event: PointerEvent) => {
+    const handleClick = (event: PointerEvent) => {
       const point = pointerPosition(event);
       const view = viewRef.current;
-      if (!view.moved) {
-        const hit = hitTestPlot(point.x, point.y, view, plotsRef.current);
-        if (hit !== null) callbacksRef.current.onPlotClick(hit);
-      }
-      view.dragging = false;
-      canvas.releasePointerCapture(event.pointerId);
+      const hit = hitTestPlot(point.x, point.y, view, plotsRef.current);
+      if (hit !== null) callbacksRef.current.onPlotClick(hit);
     };
-    const handleWheel = (event: WheelEvent) => {
-      event.preventDefault();
-      viewRef.current.zoom = Math.max(
-        0.78,
-        Math.min(1.32, viewRef.current.zoom - event.deltaY * 0.001),
-      );
+    const handlePointerLeave = () => {
+      viewRef.current.hoverId = null;
+      canvas.style.cursor = 'default';
+      callbacksRef.current.onPlotHover(null);
     };
 
-    canvas.addEventListener('pointerdown', handlePointerDown);
     canvas.addEventListener('pointermove', handlePointerMove);
-    canvas.addEventListener('pointerup', handlePointerUp);
-    canvas.addEventListener('pointercancel', handlePointerUp);
-    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    canvas.addEventListener('click', handleClick);
+    canvas.addEventListener('pointerleave', handlePointerLeave);
     return () => {
       cancelAnimationFrame(animationFrame);
       observer.disconnect();
-      canvas.removeEventListener('pointerdown', handlePointerDown);
       canvas.removeEventListener('pointermove', handlePointerMove);
-      canvas.removeEventListener('pointerup', handlePointerUp);
-      canvas.removeEventListener('pointercancel', handlePointerUp);
-      canvas.removeEventListener('wheel', handleWheel);
+      canvas.removeEventListener('click', handleClick);
+      canvas.removeEventListener('pointerleave', handlePointerLeave);
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="farm-canvas" aria-label="24格等距 Token 农场" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className="farm-canvas"
+      aria-label="24格等距 Token 农场"
+      data-land-layout="ground-anchored"
+      draggable={false}
+    />
+  );
 }
 
 function projection(view: ViewState): Projection {
-  const tileWidth = 108 * view.zoom;
-  const tileHeight = 54 * view.zoom;
+  const scale = Math.max(view.width / BACKGROUND_WIDTH, view.height / BACKGROUND_HEIGHT);
   return {
-    originX: view.width / 2 - tileWidth * 0.5 + view.panX,
-    originY: Math.max(128, view.height * 0.23) + view.panY,
-    tileWidth,
-    tileHeight,
-    zoom: view.zoom,
+    offsetX: (view.width - BACKGROUND_WIDTH * scale) / 2,
+    offsetY: (view.height - BACKGROUND_HEIGHT * scale) / 2,
+    tileWidth: 196 * scale,
+    tileHeight: 86 * scale,
+    scale,
   };
 }
 
 function plotCenter(plot: FarmPlot, project: Projection) {
+  const slot = BACKGROUND_PLOT_CENTERS[plot.id - 1] ?? BACKGROUND_PLOT_CENTERS[0];
   return {
-    x: project.originX + (plot.column - plot.row) * project.tileWidth * 0.5,
-    y: project.originY + (plot.column + plot.row) * project.tileHeight * 0.5,
+    x: project.offsetX + slot.x * project.scale,
+    y: project.offsetY + slot.y * project.scale,
   };
 }
 
@@ -216,77 +194,37 @@ function drawPlot(
   const center = plotCenter(plot, project);
   const halfWidth = project.tileWidth * 0.46;
   const halfHeight = project.tileHeight * 0.46;
-  const sideDepth = (10 * project.tileHeight) / 54;
   const highlighted = plot.id === selectedPlotId || plot.id === hoverId;
-  drawDiamondSide(
-    context,
-    center.x,
-    center.y,
-    halfWidth,
-    halfHeight,
-    sideDepth,
-    plot.unlocked ? '#754b31' : '#53655c',
-  );
-  drawDiamond(
-    context,
-    center.x,
-    center.y,
-    halfWidth,
-    halfHeight,
-    plot.unlocked ? '#885936' : '#66746d',
-  );
-  if (plot.unlocked) drawSoilRows(context, center.x, center.y, halfWidth, halfHeight);
+  if (!plot.unlocked) {
+    context.fillStyle = 'rgba(44, 61, 52, .58)';
+    fillDiamond(context, center.x, center.y, halfWidth, halfHeight);
+  }
   if (highlighted) {
     context.strokeStyle = plot.id === selectedPlotId ? '#ffd45f' : 'rgba(255,255,255,.7)';
     context.lineWidth = plot.id === selectedPlotId ? 3 : 2;
     strokeDiamond(context, center.x, center.y, halfWidth, halfHeight);
   }
-  if (!plot.unlocked) drawLock(context, center.x, center.y - 2, project.zoom);
+  if (!plot.unlocked) drawLock(context, center.x, center.y - 2, project.scale);
   if (plot.watered && plot.unlocked)
     drawWater(context, center.x, center.y, halfWidth, halfHeight, time);
-  if (plot.cropId) drawCrop(context, plot, center.x, center.y, project.zoom, time);
+  if (plot.cropId) drawCrop(context, plot, center.x, center.y, project.scale, time);
   if (plot.issue)
     drawIssue(
       context,
       plot.issue,
       center.x + halfWidth * 0.58,
       center.y - halfHeight * 0.8,
-      project.zoom,
+      project.scale,
     );
 }
 
-// eslint-disable-next-line max-params -- Canvas hot path passes scalar coordinates to avoid per-frame allocations.
-function drawDiamondSide(
+function fillDiamond(
   context: CanvasRenderingContext2D,
   x: number,
   y: number,
   width: number,
   height: number,
-  depth: number,
-  color: string,
 ) {
-  context.fillStyle = color;
-  context.beginPath();
-  context.moveTo(x - width, y);
-  context.lineTo(x, y + height);
-  context.lineTo(x + width, y);
-  context.lineTo(x + width, y + depth);
-  context.lineTo(x, y + height + depth);
-  context.lineTo(x - width, y + depth);
-  context.closePath();
-  context.fill();
-}
-
-// eslint-disable-next-line max-params -- Canvas hot path passes scalar coordinates to avoid per-frame allocations.
-function drawDiamond(
-  context: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  color: string,
-) {
-  context.fillStyle = color;
   context.beginPath();
   context.moveTo(x, y - height);
   context.lineTo(x + width, y);
@@ -310,23 +248,6 @@ function strokeDiamond(
   context.lineTo(x - width, y);
   context.closePath();
   context.stroke();
-}
-
-function drawSoilRows(
-  context: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-) {
-  context.strokeStyle = 'rgba(62, 34, 25, .5)';
-  context.lineWidth = 1;
-  for (const offset of [-0.38, 0, 0.38]) {
-    context.beginPath();
-    context.moveTo(x - width * 0.62 + width * offset, y + height * 0.38 + height * offset);
-    context.lineTo(x + width * 0.62 + width * offset, y - height * 0.38 + height * offset);
-    context.stroke();
-  }
 }
 
 // eslint-disable-next-line max-params -- Animated water rendering uses scalar geometry every frame.
@@ -385,12 +306,12 @@ function drawCrop(
       context.fillRect(baseX + scale + sway, baseY - height * 0.48, 7 * scale, 5 * scale);
     }
     if (phaseSize > 0.7) {
-      const bloomSize = (phase === 'mature' ? 10 : 7) * scale;
+      const bloomSize = (phase === 'mature' ? 13 : 9) * scale;
       drawModelBloom(context, {
         x: baseX + sway,
         y: baseY - height,
         size: bloomSize,
-        shape: model.bloom,
+        brand: model.brand,
         petalColor: model.color,
         centerColor: crop.color,
       });

@@ -28,7 +28,7 @@ export function ApiPanel({ onClose }: { onClose: () => void }) {
       wide
       eyebrow="MODEL GATEWAY"
       title="API 接入"
-      description="OpenAI 与 Anthropic 兼容调用共享你的模型钱包，密钥只在创建时展示一次。"
+      description="统一密钥调用已授权模型，Token 按最终用量结算；密钥只在创建时展示一次。"
       onClose={onClose}
       actions={
         <button className="primary-command compact-command" type="button" onClick={createKey}>
@@ -117,20 +117,6 @@ export function ApiPanel({ onClose }: { onClose: () => void }) {
         ) : (
           <div className="empty-key">没有有效密钥。创建后即可调用沙箱模型。</div>
         )}
-      </section>
-      <section className="api-section quickstart-section">
-        <div className="api-section-heading">
-          <div>
-            <span className="section-kicker">QUICK START</span>
-            <h3>OpenAI 兼容请求</h3>
-          </div>
-        </div>
-        <pre>
-          <code>{`curl ${API_ENDPOINT}/chat/completions \\
-  -H "Authorization: Bearer $TOKEN_FARMER_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"model":"gpt-5.4-mini","messages":[{"role":"user","content":"你好"}]}'`}</code>
-        </pre>
       </section>
     </PanelShell>
   );

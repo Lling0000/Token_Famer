@@ -1,6 +1,14 @@
-import type { FarmActionInput, FarmActionResult, FarmPlot, PlotPhase } from './game-types';
+import type { FarmActionInput, FarmActionResult, FarmPlot, ModelId, PlotPhase } from './game-types';
 
 const CROP_CYCLE = ['radish', 'carrot', 'cabbage', 'corn', 'lettuce', 'rapeseed'];
+const MODEL_CYCLE = [
+  'gpt-5.4',
+  'claude-sonnet-4-6',
+  'gemini-3.1-pro-preview',
+  'gemini-3.5-flash',
+  'gpt-5.6-terra',
+  'claude-sonnet-5',
+] satisfies readonly ModelId[];
 
 export function createFarmPlots(nowMs: number, demo = false): FarmPlot[] {
   return Array.from({ length: 24 }, (_, index) =>
@@ -36,7 +44,7 @@ function createDemoPlot(index: number, nowMs: number): FarmPlot {
     column: index % 6,
     unlocked: true,
     cropId: planted ? (CROP_CYCLE[index % CROP_CYCLE.length] ?? null) : null,
-    modelId: planted ? 'gpt-5.4-mini' : null,
+    modelId: planted ? (MODEL_CYCLE[index % MODEL_CYCLE.length] ?? 'gpt-5.4-mini') : null,
     plantedAtMs: planted ? nowMs - elapsed : null,
     durationMs: planted ? durationMs : null,
     watered: index % 3 === 0,

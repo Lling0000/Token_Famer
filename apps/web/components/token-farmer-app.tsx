@@ -1,19 +1,25 @@
 'use client';
 
-import { MonitorUp, Sprout } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { AuthScreen } from './auth/auth-screen';
 import { OnboardingScreen } from './auth/onboarding-screen';
+import { DesktopRequired } from './desktop-required';
 import { FarmCanvas } from './farm/farm-canvas';
 import { FarmHud } from './game/farm-hud';
+import { FarmDecoration } from './game/farm-decoration';
+import { FarmTravelOverlay } from './game/farm-travel-overlay';
 import { FriendSidebar } from './game/friend-sidebar';
 import { FriendVisitBar } from './game/friend-visit-bar';
 import { GameToast } from './game/toast';
 import { PanelHost } from './game/panel-host';
 import { ToolDock } from './game/tool-dock';
 import { TopBar } from './game/top-bar';
-import { CROPS, WELCOME_BALANCE, getCrop } from '@/lib/game-data';
+import { CROPS, DEMO_BALANCE, WELCOME_BALANCE, getCrop } from '@/lib/game-data';
+import { formatStealAmount, sampleBasisPoints, stealAmount } from '@/lib/demo-steal';
+import { currentUtcMs } from '@/lib/browser-clock';
 import { applyFarmAction, createFarmPlots, getPlotPhase } from '@/lib/game-engine';
+import { useGameAudio } from '@/lib/use-game-audio';
+import { useGameShop } from '@/lib/use-game-shop';
 import type {
   FarmPlot,
   FarmTool,
@@ -24,13 +30,9 @@ import type {
   VisitorAction,
 } from '@/lib/game-types';
 
-type Screen = 'auth' | 'onboarding' | 'game';
-
-const DEMO_BALANCE = 44_050_000n;
-
 // eslint-disable-next-line max-lines-per-function -- The app shell coordinates local demo adapters; server-backed state will replace this composition boundary.
 export function TokenFarmerApp() {
-  const [screen, setScreen] = useState<Screen>('auth');
+  const [screen, setScreen] = useState<'auth' | 'onboarding' | 'game'>('auth');
   const [nickname, setNickname] = useState('新农场主');
   const [level, setLevel] = useState(1);
   const [modelId, setModelId] = useState<ModelId>('gpt-5.4-mini');
@@ -41,12 +43,17 @@ export function TokenFarmerApp() {
   const [activeTool, setActiveTool] = useState<FarmTool>('inspect');
   const [panel, setPanel] = useState<GamePanel>(null);
   const [visitingFriend, setVisitingFriend] = useState<FriendSummary | null>(null);
+  const [farmDestination, setFarmDestination] = useState<FriendSummary | 'home' | null>(null);
   const [friendPlots, setFriendPlots] = useState<FarmPlot[]>([]);
   const [visitorAction, setVisitorAction] = useState<VisitorAction>('inspect');
   const [friendAttempts, setFriendAttempts] = useState<Set<string>>(() => new Set());
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [claimedTaskIds, setClaimedTaskIds] = useState<string[]>([]);
   const [packages, setPackages] = useState<TokenPackage[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(currentUtcMs);
+  const { muted, toggleMuted, playFarmEffect, playDogBark } = useGameAudio(screen === 'game');
+  const shop = useGameShop({ balance, setBalance, setToast, playDogBark, nowMs });
 
   useEffect(() => {
     if (screen !== 'game') return;
@@ -58,6 +65,24 @@ export function TokenFarmerApp() {
     const timeout = window.setTimeout(() => setToast(null), 2_600);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+  useEffect(() => {
+    if (!farmDestination) return;
+    const timeout = window.setTimeout(() => {
+      if (farmDestination === 'home') {
+        setVisitingFriend(null);
+        setSelectedPlotId(1);
+        setToast('已返回自己的农场');
+      } else {
+        setVisitingFriend(farmDestination);
+        setFriendPlots(createFarmPlots(currentUtcMs(), true));
+        setVisitorAction('inspect');
+        setSelectedPlotId(1);
+        setToast(`已到达 ${farmDestination.name} 的农场`);
+      }
+      setFarmDestination(null);
+    }, 1_400);
+    return () => window.clearTimeout(timeout);
+  }, [farmDestination]);
 
   const visiblePlots = visitingFriend ? friendPlots : plots;
   const selectedPlot = useMemo(
@@ -74,15 +99,15 @@ export function TokenFarmerApp() {
     setPackages([
       {
         id: 'demo-1',
-        cropName: '油菜花',
-        modelId: 'gpt-5.4-mini',
+        cropName: 'ChatGPT 花',
+        modelId: 'gpt-5.4',
         amount: 2_880_000n,
         createdAt: '今天 13:42',
         source: 'harvest',
       },
       {
         id: 'demo-2',
-        cropName: '生菜',
+        cropName: 'Claude 花',
         modelId: 'claude-sonnet-4-6',
         amount: 1_005_000n,
         createdAt: '今天 12:18',
@@ -122,6 +147,7 @@ export function TokenFarmerApp() {
     });
     setToast(result.message);
     if (!result.changed) return;
+    playFarmEffect(activeTool);
     setPlots((items) => items.map((plot) => (plot.id === plotId ? result.plot : plot)));
     if (result.balanceDelta !== 0n) {
       setBalance((current) => current + result.balanceDelta);
@@ -176,7 +202,10 @@ export function TokenFarmerApp() {
     setFriendAttempts((items) => new Set(items).add(key));
     const guardRoll = sampleBasisPoints();
     const successRoll = sampleBasisPoints();
-    if (guardRoll < 1_500) return setToast('偷取失败：被萌犬发现了');
+    if (guardRoll < 1_500) {
+      playDogBark();
+      return setToast('偷取失败：被萌犬发现了');
+    }
     const successChance = Math.min(6_500, 3_500 + friend.intimacyLevel * 600);
     if (successRoll >= successChance) return setToast('这次没有偷到，下一茬再试试');
     const amount = stealAmount(crop.cost, sampleBasisPoints());
@@ -195,12 +224,7 @@ export function TokenFarmerApp() {
   };
 
   const visitFriend = (friend: FriendSummary) => {
-    setVisitingFriend(friend);
-    setFriendPlots(createFarmPlots(currentUtcMs(), true));
-    setVisitorAction('inspect');
-    setSelectedPlotId(1);
-    setPanel(null);
-    setToast(`已到达 ${friend.name} 的农场`);
+    setFarmDestination(friend);
   };
 
   const batchHarvest = () => {
@@ -233,6 +257,7 @@ export function TokenFarmerApp() {
     if (!harvested.length) return setToast('当前没有可收获的作物');
     setPlots(nextPlots);
     setPackages((items) => [...harvested, ...items]);
+    playFarmEffect('harvest');
     setToast(`已收获 ${harvested.length} 块土地，Token 包已入仓`);
   };
 
@@ -268,16 +293,19 @@ export function TokenFarmerApp() {
           <div className="game-shell">
             <TopBar
               modelId={modelId}
-              balance={balance}
               nickname={nickname}
+              balance={balance}
               level={level}
               onModelChange={setModelId}
               onOpenPanel={setPanel}
               onOpenSocial={() => setPanel('social')}
+              muted={muted}
+              onToggleAudio={toggleMuted}
             />
-            <main className="game-main">
+            <main className={sidebarCollapsed ? 'game-main sidebar-collapsed' : 'game-main'}>
               <section className="farm-stage">
                 <div className="farm-backdrop" aria-hidden="true" />
+                <FarmDecoration decoration={shop.equippedDecoration} />
                 <FarmCanvas
                   plots={visiblePlots}
                   selectedPlotId={selectedPlotId}
@@ -304,25 +332,44 @@ export function TokenFarmerApp() {
                     }
                     onAction={setVisitorAction}
                     onReturn={() => {
-                      setVisitingFriend(null);
-                      setSelectedPlotId(1);
-                      setToast('已返回自己的农场');
+                      setFarmDestination('home');
                     }}
                   />
                 ) : (
                   <ToolDock
                     activeTool={activeTool}
+                    level={level}
+                    selectedCrop={selectedCrop}
                     onToolChange={setActiveTool}
+                    onSelectCrop={(crop) => {
+                      setSelectedCrop(crop);
+                      setModelId(crop.modelId);
+                      setToast(`已选择 ${crop.name}，点击空地播种`);
+                    }}
+                    onOpenShop={() => setPanel('shop')}
                     onBatchHarvest={batchHarvest}
                   />
                 )}
                 <GameToast message={toast} />
+                {farmDestination && (
+                  <FarmTravelOverlay
+                    destination={
+                      farmDestination === 'home'
+                        ? '我的 Token 农场'
+                        : `${farmDestination.name}的农场`
+                    }
+                  />
+                )}
               </section>
               <FriendSidebar
                 visiting={visitingFriend}
+                collapsed={sidebarCollapsed}
+                nowMs={nowMs}
+                dogGuardUntilMs={shop.dogGuardUntilMs}
                 onVisit={visitFriend}
                 onAddFriend={() => setPanel('social')}
-                onFeedDog={() => setToast('已续喂萌犬 1 天，守护概率规则保持不变')}
+                onToggle={() => setSidebarCollapsed((current) => !current)}
+                onFeedDog={() => setPanel('shop')}
               />
             </main>
             <PanelHost
@@ -332,9 +379,14 @@ export function TokenFarmerApp() {
               balance={balance}
               packages={packages}
               modelId={modelId}
+              nickname={nickname}
+              claimedTaskIds={claimedTaskIds}
+              ownedDecorations={shop.ownedDecorations}
+              equippedDecoration={shop.equippedDecoration}
               onClose={() => setPanel(null)}
               onSelectCrop={(crop) => {
                 setSelectedCrop(crop);
+                setModelId(crop.modelId);
                 setActiveTool('seed');
                 setPanel(null);
                 setToast(`已装备 ${crop.name} 花种`);
@@ -343,46 +395,22 @@ export function TokenFarmerApp() {
               onActivate={activatePackage}
               onActivateAll={activateAll}
               onPurchase={completePurchase}
+              onNicknameChange={(nextNickname) => {
+                setNickname(nextNickname);
+                setToast('农场主昵称已更新');
+              }}
+              onClaimTask={(taskId, rewardToken) => {
+                if (claimedTaskIds.includes(taskId)) return;
+                setClaimedTaskIds((current) => [...current, taskId]);
+                setBalance((current) => current + rewardToken);
+                setToast(`任务奖励 ${rewardToken / 1_000n}K Token 已入账`);
+              }}
+              onBuyDogFood={shop.buyDogFood}
+              onDecorationAction={shop.useDecoration}
             />
           </div>
         )}
       </div>
     </>
   );
-}
-
-function DesktopRequired() {
-  return (
-    <main className="desktop-required">
-      <span className="brand-mark">
-        <Sprout size={21} />
-      </span>
-      <MonitorUp size={42} />
-      <h1>请使用电脑浏览器</h1>
-      <p>Token Farmer 当前支持宽度 1180px 以上的桌面屏幕。</p>
-    </main>
-  );
-}
-
-function currentUtcMs(): number {
-  return new Date().getTime();
-}
-
-function sampleBasisPoints(): number {
-  return (crypto.getRandomValues(new Uint16Array(1))[0] ?? 0) % 10_000;
-}
-
-function stealAmount(seedCost: bigint, roll: number): bigint {
-  if (roll < 5_500) return maxBigInt(1n, (seedCost * 5n) / 1_000n);
-  if (roll < 8_500) return maxBigInt(1n, seedCost / 100n);
-  if (roll < 9_700) return maxBigInt(1n, (seedCost * 2n) / 100n);
-  return maxBigInt(1n, (seedCost * 5n) / 100n);
-}
-
-function maxBigInt(left: bigint, right: bigint): bigint {
-  return left > right ? left : right;
-}
-
-function formatStealAmount(amount: bigint): string {
-  return amount >= 1_000n ? `${amount / 1_000n}K` : amount.toString();
 }

@@ -26,17 +26,20 @@ export type GamePanel =
   'shop' | 'warehouse' | 'leaderboard' | 'api' | 'tasks' | 'social' | 'payment' | null;
 export type PlotIssue = 'weed' | 'bug' | null;
 export type PlotPhase = 'empty' | 'seed' | 'sprout' | 'growing' | 'flowering' | 'mature';
+export type ModelBrand = 'openai' | 'anthropic' | 'deepseek' | 'google' | 'zhipu';
+export type FarmDecoration = 'none' | 'lantern-line' | 'flower-flags';
 
 export interface ModelDefinition {
   id: ModelId;
   label: string;
   shortLabel: string;
   color: string;
-  bloom: 'star' | 'round' | 'lotus' | 'crystal' | 'double';
+  brand: ModelBrand;
 }
 
 export interface CropDefinition {
   id: string;
+  modelId: ModelId;
   level: number;
   name: string;
   cost: bigint;

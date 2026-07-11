@@ -3,18 +3,18 @@
 import {
   BarChart3,
   Boxes,
-  ChevronDown,
   CircleUserRound,
   KeyRound,
   ListChecks,
   Settings,
   ShoppingBasket,
-  Sparkles,
   Sprout,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { formatTokenAmount } from '@/lib/game-engine';
-import { MODELS } from '@/lib/game-data';
 import type { GamePanel, ModelId } from '@/lib/game-types';
+import { ModelPicker } from '../model/model-picker';
 
 interface TopBarProps {
   modelId: ModelId;
@@ -24,6 +24,8 @@ interface TopBarProps {
   onModelChange: (modelId: ModelId) => void;
   onOpenPanel: (panel: Exclude<GamePanel, null>) => void;
   onOpenSocial: () => void;
+  muted: boolean;
+  onToggleAudio: () => void;
 }
 
 const NAV_ITEMS = [
@@ -43,6 +45,8 @@ export function TopBar({
   onModelChange,
   onOpenPanel,
   onOpenSocial,
+  muted,
+  onToggleAudio,
 }: TopBarProps) {
   return (
     <header className="top-bar">
@@ -54,34 +58,13 @@ export function TopBar({
         <span className="environment-chip">沙箱</span>
       </div>
 
-      <div className="wallet-switcher">
-        <span
-          className="model-color"
-          style={{ backgroundColor: MODELS.find((model) => model.id === modelId)?.color }}
-        />
-        <label>
-          <span>调用 / 种植模型</span>
-          <select
-            value={modelId}
-            onChange={(event) => onModelChange(event.target.value as ModelId)}
-          >
-            {MODELS.map((model) => (
-              <option value={model.id} key={model.id}>
-                {model.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <ChevronDown size={15} aria-hidden="true" />
-        <strong>{formatTokenAmount(balance)}</strong>
-      </div>
+      <ModelPicker
+        modelId={modelId}
+        balanceLabel={formatTokenAmount(balance)}
+        onModelChange={onModelChange}
+      />
 
       <div className="resource-strip" aria-label="农场资源">
-        <span className="resource-item">
-          <Sparkles size={15} />
-          <b>1,280</b>
-          <small>花瓣</small>
-        </span>
         <span className="resource-item level-resource">
           <b>LV.{level}</b>
           <span className="level-track">
@@ -100,6 +83,16 @@ export function TopBar({
       </nav>
 
       <div className="profile-controls">
+        <button
+          className="icon-button audio-toggle"
+          type="button"
+          title={muted ? '开启农场声音' : '静音农场声音'}
+          aria-label={muted ? '开启农场声音' : '静音农场声音'}
+          aria-pressed={muted}
+          onClick={onToggleAudio}
+        >
+          {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+        </button>
         <button
           className="profile-button"
           type="button"

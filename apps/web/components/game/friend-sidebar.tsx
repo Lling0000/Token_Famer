@@ -1,6 +1,17 @@
 'use client';
 
-import { Bell, Footprints, Plus, Search, Shield, Sparkles, UserRoundPlus } from 'lucide-react';
+import {
+  Bell,
+  Footprints,
+  PanelRightClose,
+  PanelRightOpen,
+  Plus,
+  Search,
+  Shield,
+  Sparkles,
+  UserRoundPlus,
+  Users,
+} from 'lucide-react';
 import { useState } from 'react';
 import type { FriendSummary } from '@/lib/game-types';
 
@@ -63,17 +74,58 @@ export const FRIENDS: FriendSummary[] = [
 
 interface FriendSidebarProps {
   visiting: FriendSummary | null;
+  collapsed: boolean;
+  nowMs: number;
+  dogGuardUntilMs: number;
   onVisit: (friend: FriendSummary) => void;
   onAddFriend: () => void;
+  onToggle: () => void;
   onFeedDog: () => void;
 }
 
 // eslint-disable-next-line max-lines-per-function -- The sidebar is one data-driven navigation list without business calculations.
-export function FriendSidebar({ visiting, onVisit, onAddFriend, onFeedDog }: FriendSidebarProps) {
+export function FriendSidebar({
+  visiting,
+  collapsed,
+  nowMs,
+  dogGuardUntilMs,
+  onVisit,
+  onAddFriend,
+  onToggle,
+  onFeedDog,
+}: FriendSidebarProps) {
   const [query, setQuery] = useState('');
   const visibleFriends = FRIENDS.filter((friend) =>
     friend.name.toLowerCase().includes(query.toLowerCase()),
   );
+
+  if (collapsed) {
+    return (
+      <aside className="friend-sidebar collapsed" aria-label="已收起的好友农场">
+        <button className="sidebar-toggle" type="button" onClick={onToggle} title="展开好友栏">
+          <PanelRightOpen size={19} />
+          <span>展开好友栏</span>
+        </button>
+        <button
+          className="collapsed-sidebar-action"
+          type="button"
+          onClick={onAddFriend}
+          title="好友"
+        >
+          <Users size={19} />
+          <i>3</i>
+        </button>
+        <button
+          className="collapsed-sidebar-action dog"
+          type="button"
+          onClick={onFeedDog}
+          title="萌犬守护"
+        >
+          <Shield size={19} />
+        </button>
+      </aside>
+    );
+  }
 
   return (
     <aside className="friend-sidebar">
@@ -90,6 +142,15 @@ export function FriendSidebar({ visiting, onVisit, onAddFriend, onFeedDog }: Fri
           onClick={onAddFriend}
         >
           <UserRoundPlus size={18} />
+        </button>
+        <button
+          className="icon-button"
+          type="button"
+          title="收起好友栏"
+          aria-label="收起好友栏"
+          onClick={onToggle}
+        >
+          <PanelRightClose size={18} />
         </button>
       </header>
       <label className="friend-search">
@@ -143,7 +204,7 @@ export function FriendSidebar({ visiting, onVisit, onAddFriend, onFeedDog }: Fri
       <footer className="friend-footer">
         <span>
           <Shield size={15} />
-          萌犬守护 <b>06:42:18</b>
+          萌犬守护 <b>{formatGuardTime(dogGuardUntilMs - nowMs)}</b>
         </span>
         <button
           className="icon-button compact"
@@ -160,4 +221,12 @@ export function FriendSidebar({ visiting, onVisit, onAddFriend, onFeedDog }: Fri
       </div>
     </aside>
   );
+}
+
+function formatGuardTime(remainingMs: number): string {
+  const totalSeconds = Math.max(0, Math.floor(remainingMs / 1_000));
+  const hours = Math.floor(totalSeconds / 3_600);
+  const minutes = Math.floor((totalSeconds % 3_600) / 60);
+  const seconds = totalSeconds % 60;
+  return [hours, minutes, seconds].map((value) => value.toString().padStart(2, '0')).join(':');
 }

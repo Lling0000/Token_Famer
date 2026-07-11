@@ -1,46 +1,103 @@
+import type { ModelBrand } from '@/lib/game-types';
+
 interface BloomGeometry {
   x: number;
   y: number;
   size: number;
-  shape: 'star' | 'round' | 'lotus' | 'crystal' | 'double';
+  brand: ModelBrand;
   petalColor: string;
   centerColor: string;
 }
 
 export function drawModelBloom(context: CanvasRenderingContext2D, bloom: BloomGeometry): void {
-  const unit = bloom.size / 3;
-  context.fillStyle = bloom.petalColor;
-  if (bloom.shape === 'star') drawStar(context, bloom, unit);
-  else if (bloom.shape === 'lotus') drawLotus(context, bloom, unit);
-  else if (bloom.shape === 'crystal') drawCrystal(context, bloom, unit);
-  else drawRound(context, bloom);
+  const pixel = Math.max(1, Math.round(bloom.size / 5));
+  drawFlowerHead(context, bloom, pixel);
+  context.fillStyle = '#fffdf0';
+  if (bloom.brand === 'openai') drawOpenAiMark(context, bloom, pixel);
+  else if (bloom.brand === 'anthropic') drawAnthropicMark(context, bloom, pixel);
+  else if (bloom.brand === 'deepseek') drawDeepSeekMark(context, bloom, pixel);
+  else if (bloom.brand === 'google') drawGeminiMark(context, bloom, pixel);
+  else drawZhipuMark(context, bloom, pixel);
+}
+
+function drawFlowerHead(
+  context: CanvasRenderingContext2D,
+  bloom: BloomGeometry,
+  pixel: number,
+): void {
+  const radius = pixel * 4;
   context.fillStyle = bloom.centerColor;
-  const centerSize = bloom.shape === 'double' ? unit * 1.5 : unit;
-  context.fillRect(bloom.x - centerSize / 2, bloom.y - centerSize / 2, centerSize, centerSize);
+  context.fillRect(
+    bloom.x - radius - pixel,
+    bloom.y - radius - pixel,
+    radius * 2 + pixel * 2,
+    radius * 2 + pixel * 2,
+  );
+  context.fillStyle = bloom.petalColor;
+  context.fillRect(bloom.x - radius, bloom.y - radius, radius * 2, radius * 2);
 }
 
-function drawStar(context: CanvasRenderingContext2D, bloom: BloomGeometry, unit: number): void {
-  context.fillRect(bloom.x - unit / 2, bloom.y - bloom.size, unit, bloom.size * 2);
-  context.fillRect(bloom.x - bloom.size, bloom.y - unit / 2, bloom.size * 2, unit);
+function drawOpenAiMark(
+  context: CanvasRenderingContext2D,
+  bloom: BloomGeometry,
+  pixel: number,
+): void {
+  const offsets = [
+    [-2, -2],
+    [0, -3],
+    [2, -2],
+    [2, 1],
+    [0, 2],
+    [-2, 1],
+  ];
+  for (const [x, y] of offsets)
+    context.fillRect(bloom.x + x * pixel, bloom.y + y * pixel, pixel * 2, pixel * 2);
+  context.clearRect(bloom.x - pixel / 2, bloom.y - pixel / 2, pixel, pixel);
 }
 
-function drawLotus(context: CanvasRenderingContext2D, bloom: BloomGeometry, unit: number): void {
-  context.fillRect(bloom.x - bloom.size, bloom.y - unit / 2, bloom.size, unit);
-  context.fillRect(bloom.x, bloom.y - unit / 2, bloom.size, unit);
-  context.fillRect(bloom.x - unit / 2, bloom.y - bloom.size, unit, bloom.size);
+function drawAnthropicMark(
+  context: CanvasRenderingContext2D,
+  bloom: BloomGeometry,
+  pixel: number,
+): void {
+  for (let row = 0; row < 5; row += 1) {
+    context.fillRect(bloom.x - (row + 1) * pixel, bloom.y + (row - 3) * pixel, pixel, pixel);
+    context.fillRect(bloom.x + row * pixel, bloom.y + (row - 3) * pixel, pixel, pixel);
+  }
+  context.fillRect(bloom.x - pixel * 2, bloom.y, pixel * 4, pixel);
 }
 
-function drawCrystal(context: CanvasRenderingContext2D, bloom: BloomGeometry, unit: number): void {
-  context.fillRect(bloom.x - unit / 2, bloom.y - bloom.size, unit, bloom.size * 2);
-  context.fillRect(bloom.x - unit * 1.5, bloom.y - unit, unit, bloom.size);
-  context.fillRect(bloom.x + unit / 2, bloom.y - unit, unit, bloom.size);
+function drawDeepSeekMark(
+  context: CanvasRenderingContext2D,
+  bloom: BloomGeometry,
+  pixel: number,
+): void {
+  context.fillRect(bloom.x - pixel * 3, bloom.y - pixel, pixel * 5, pixel * 3);
+  context.fillRect(bloom.x + pixel, bloom.y - pixel * 2, pixel * 2, pixel * 3);
+  context.clearRect(bloom.x - pixel * 2, bloom.y, pixel * 3, pixel);
+  context.fillRect(bloom.x - pixel * 4, bloom.y - pixel * 2, pixel * 2, pixel);
 }
 
-function drawRound(context: CanvasRenderingContext2D, bloom: BloomGeometry): void {
-  context.fillRect(bloom.x - bloom.size, bloom.y - bloom.size, bloom.size, bloom.size);
-  context.fillRect(bloom.x, bloom.y - bloom.size, bloom.size, bloom.size);
-  context.fillRect(bloom.x - bloom.size, bloom.y, bloom.size, bloom.size);
-  context.fillRect(bloom.x, bloom.y, bloom.size, bloom.size);
+function drawGeminiMark(
+  context: CanvasRenderingContext2D,
+  bloom: BloomGeometry,
+  pixel: number,
+): void {
+  context.fillRect(bloom.x - pixel, bloom.y - pixel * 4, pixel * 2, pixel * 8);
+  context.fillRect(bloom.x - pixel * 4, bloom.y - pixel, pixel * 8, pixel * 2);
+  context.fillRect(bloom.x - pixel * 2, bloom.y - pixel * 2, pixel * 4, pixel * 4);
+}
+
+function drawZhipuMark(
+  context: CanvasRenderingContext2D,
+  bloom: BloomGeometry,
+  pixel: number,
+): void {
+  context.fillRect(bloom.x - pixel * 3, bloom.y - pixel * 3, pixel * 6, pixel);
+  context.fillRect(bloom.x + pixel * 2, bloom.y - pixel * 2, pixel, pixel * 2);
+  context.fillRect(bloom.x - pixel, bloom.y, pixel * 2, pixel);
+  context.fillRect(bloom.x - pixel * 3, bloom.y + pixel, pixel, pixel * 2);
+  context.fillRect(bloom.x - pixel * 3, bloom.y + pixel * 3, pixel * 6, pixel);
 }
 
 export function drawLock(

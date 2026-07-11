@@ -7,6 +7,62 @@ test('opens a playable desktop farm from demo mode', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '晨露 Token 农场' })).toBeVisible();
   await expect(page.getByLabel('24格等距 Token 农场')).toBeVisible();
   await expect(page.getByRole('button', { name: '一键收获' })).toBeVisible();
+  const canvas = page.getByLabel('24格等距 Token 农场');
+  await expect(canvas).toHaveAttribute('data-land-layout', 'ground-anchored');
+  await expect(canvas).toHaveAttribute('draggable', 'false');
+  await expect(
+    page.getByRole('button', { name: '浇水' }).locator('.lucide-paint-bucket'),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: '除草' }).locator('.lucide-shovel')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: '除虫' }).locator('.lucide-spray-can'),
+  ).toBeVisible();
+  await page.getByRole('button', { name: '静音农场声音' }).click();
+  await expect(page.getByRole('button', { name: '开启农场声音' })).toBeVisible();
+  await page.getByRole('button', { name: '播种' }).click();
+  await expect(page.getByRole('dialog', { name: '选择要播种的花种' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /ChatGPT 花苗.*免费/ })).toBeVisible();
+});
+
+test('uses branded model picker and supports profile and sidebar controls', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '进入演示农场' }).click();
+
+  const picker = page.getByRole('button', { name: /调用 \/ 种植模型/ });
+  await picker.click();
+  await expect(page.getByRole('listbox', { name: '选择模型' })).toBeVisible();
+  await expect(page.getByText('Anthropic', { exact: true })).toBeVisible();
+  await page.getByRole('option', { name: /Claude Sonnet 4.6/ }).click();
+  await expect(picker).toContainText('Sonnet');
+
+  await page.getByLabel('收起好友栏').click();
+  await expect(page.locator('.game-main')).toHaveClass(/sidebar-collapsed/);
+  await page.getByTitle('展开好友栏').click();
+
+  await page.getByTitle('账号与社交设置').click();
+  await page.getByLabel('农场主昵称').fill('像素园丁');
+  await page.getByRole('button', { name: '保存昵称' }).click();
+  await expect(page.getByTitle('账号与社交设置')).toContainText('像素园丁');
+});
+
+test('claims a completed task into the unified Token balance once', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '进入演示农场' }).click();
+  const balanceBefore = await page
+    .getByRole('button', { name: /调用 \/ 种植模型/ })
+    .locator('b')
+    .textContent();
+  await page.getByRole('button', { name: '任务' }).click();
+  await page.getByRole('button', { name: '领取', exact: true }).click();
+  await expect(page.getByRole('button', { name: '已领取' })).toBeDisabled();
+  await page.getByRole('button', { name: '关闭' }).click();
+  const balanceAfter = await page
+    .getByRole('button', { name: /调用 \/ 种植模型/ })
+    .locator('b')
+    .textContent();
+  expect(balanceAfter).not.toBe(balanceBefore);
+  await page.getByRole('button', { name: '任务' }).click();
+  await expect(page.getByRole('button', { name: '已领取' })).toBeDisabled();
 });
 
 test('blocks unsupported narrow screens', async ({ page }) => {
@@ -21,7 +77,7 @@ test('opens connected game panels and completes a sandbox purchase', async ({ pa
   await page.getByRole('button', { name: '进入演示农场' }).click();
 
   await page.getByRole('button', { name: '商店' }).click();
-  await expect(page.getByRole('heading', { name: 'Token 花种商店' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Token 农场商店' })).toBeVisible();
   await page.getByRole('button', { name: '购买 Token' }).click();
   await expect(page.getByRole('heading', { name: '购买模型 Token' })).toBeVisible();
   await page.getByRole('button', { name: /庄园包/ }).click();
@@ -37,18 +93,67 @@ test('opens connected game panels and completes a sandbox purchase', async ({ pa
   await page.getByRole('button', { name: 'API' }).click();
   await page.getByRole('button', { name: '创建密钥' }).click();
   await expect(page.getByText('立即保存这枚密钥')).toBeVisible();
+  await expect(page.getByText('OpenAI 兼容请求')).toHaveCount(0);
+});
+
+test('shows Token packages as a compact branded warehouse grid', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '进入演示农场' }).click();
+  await page.getByRole('button', { name: '仓库' }).click();
+  await expect(page.locator('.package-grid')).toBeVisible();
+  await expect(page.locator('.package-card')).toHaveCount(2);
+  await expect(page.locator('.package-card .model-mark')).toHaveCount(2);
+  const columns = await page.locator('.package-grid').evaluate((element) => {
+    return getComputedStyle(element).gridTemplateColumns.split(' ').length;
+  });
+  expect(columns).toBe(4);
+});
+
+test('buys dog food and equips a visible farm decoration', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '进入演示农场' }).click();
+  await page.getByRole('button', { name: '商店' }).click();
+  await page.getByRole('button', { name: '萌犬用品' }).click();
+  await expect(page.getByText('田园肉骨头')).toBeVisible();
+  await page.getByRole('button', { name: '180K Token' }).click();
+  await page.getByRole('button', { name: '农场装扮' }).click();
+  await page.getByRole('button', { name: '360K Token' }).click();
+  await page.getByRole('button', { name: '关闭' }).click();
+  await expect(page.getByLabel('已装备农场装扮')).toBeVisible();
+});
+
+test('captures the unified desktop interaction surfaces', async ({ page }, testInfo) => {
+  test.setTimeout(60_000);
+  await page.goto('/');
+  await page.getByRole('button', { name: '进入演示农场' }).click();
+  const capturePanel = async (navName: string, fileName: string) => {
+    await page.getByRole('button', { name: navName }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath(fileName) });
+    await page.getByRole('button', { name: '关闭' }).click();
+  };
+  await capturePanel('商店', 'shop.png');
+  await capturePanel('仓库', 'warehouse.png');
+  await capturePanel('排行', 'leaderboard.png');
+  await page.getByTitle('账号与社交设置').click();
+  await page.screenshot({ path: testInfo.outputPath('social.png') });
+  await page.getByRole('button', { name: '关闭' }).click();
+  await page.getByRole('button', { name: /调用 \/ 种植模型/ }).click();
+  await page.screenshot({ path: testInfo.outputPath('model-picker.png') });
 });
 
 test('visits a friend farm and performs a probabilistic steal attempt', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: '进入演示农场' }).click();
   await page.getByRole('button', { name: '访问像素阿禾' }).click();
+  await expect(page.getByText('正在前往')).toBeVisible();
+  await expect(page.getByText('像素阿禾的农场')).toBeVisible();
   await expect(page.getByRole('heading', { name: '像素阿禾的 Token 农场' })).toBeVisible();
   await page.getByRole('button', { name: '试着偷取' }).click();
   const canvas = page.getByLabel('24格等距 Token 农场');
   const box = await canvas.boundingBox();
   expect(box).not.toBeNull();
-  await canvas.click({ position: { x: box!.width * 0.7, y: box!.height * 0.39 } });
+  await canvas.click({ position: { x: box!.width * 0.462, y: box!.height * 0.298 } });
   await expect(page.getByText(/偷取失败|没有偷到|成功偷到|目前不可偷取/)).toBeVisible();
   await page.getByRole('button', { name: '返回我的农场' }).click();
   await expect(page.getByRole('heading', { name: '晨露 Token 农场' })).toBeVisible();

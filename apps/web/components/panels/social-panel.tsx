@@ -1,12 +1,21 @@
 'use client';
 
-import { Check, Copy, Dog, Link2, ShieldCheck, UserPlus, Users } from 'lucide-react';
+import { Check, Copy, Dog, Link2, Save, ShieldCheck, UserPlus, Users } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { PanelShell } from './panel-shell';
 
 // eslint-disable-next-line max-lines-per-function -- The social dialog is presentation-only and contains no policy calculation.
-export function SocialPanel({ onClose }: { onClose: () => void }) {
+export function SocialPanel({
+  nickname,
+  onNicknameChange,
+  onClose,
+}: {
+  nickname: string;
+  onNicknameChange: (nickname: string) => void;
+  onClose: () => void;
+}) {
   const [friendCode, setFriendCode] = useState('');
+  const [draftNickname, setDraftNickname] = useState(nickname);
   const [requestSent, setRequestSent] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const [pranksAllowed, setPranksAllowed] = useState(true);
@@ -14,6 +23,11 @@ export function SocialPanel({ onClose }: { onClose: () => void }) {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (friendCode.trim().length >= 4) setRequestSent(true);
+  };
+  const saveNickname = (event: FormEvent) => {
+    event.preventDefault();
+    const normalized = draftNickname.trim();
+    if (normalized.length >= 2 && normalized.length <= 16) onNicknameChange(normalized);
   };
 
   return (
@@ -23,6 +37,33 @@ export function SocialPanel({ onClose }: { onClose: () => void }) {
       description="通过好友码添加农场主；帮助会增加亲密度，恶作剧只影响时间，不转移 Token。"
       onClose={onClose}
     >
+      <form className="nickname-form" onSubmit={saveNickname}>
+        <label htmlFor="farm-nickname">
+          <span className="section-kicker">PROFILE</span>
+          <strong>农场主昵称</strong>
+        </label>
+        <input
+          id="farm-nickname"
+          value={draftNickname}
+          minLength={2}
+          maxLength={16}
+          onChange={(event) => setDraftNickname(event.target.value)}
+          aria-describedby="nickname-hint"
+        />
+        <button
+          className="primary-command compact-command"
+          type="submit"
+          disabled={
+            draftNickname.trim().length < 2 ||
+            draftNickname.trim().length > 16 ||
+            draftNickname.trim() === nickname
+          }
+        >
+          <Save size={15} />
+          保存昵称
+        </button>
+        <small id="nickname-hint">2-16 个字符，保存后顶部与农场名称同步更新。</small>
+      </form>
       <div className="friend-code-card">
         <span>
           <Link2 size={18} />

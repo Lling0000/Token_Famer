@@ -20,6 +20,7 @@ type RankType = 'harvest' | 'usage' | 'holding';
 export function LeaderboardPanel({ onClose }: { onClose: () => void }) {
   const [rankType, setRankType] = useState<RankType>('harvest');
   const [scope, setScope] = useState<'global' | 'friends'>('global');
+  const [period, setPeriod] = useState<'day' | 'week' | 'all'>('week');
   return (
     <PanelShell
       wide
@@ -70,11 +71,23 @@ export function LeaderboardPanel({ onClose }: { onClose: () => void }) {
             好友
           </button>
         </div>
-        <select className="period-select" defaultValue="week" aria-label="榜单周期">
-          <option value="day">今日</option>
-          <option value="week">本周</option>
-          <option value="all">总榜</option>
-        </select>
+        <div className="segmented-control period-segment" aria-label="榜单周期">
+          {[
+            ['day', '今日'],
+            ['week', '本周'],
+            ['all', '总榜'],
+          ].map(([value, label]) => (
+            <button
+              className={period === value ? 'active' : ''}
+              type="button"
+              key={value}
+              onClick={() => setPeriod(value as typeof period)}
+              aria-pressed={period === value}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
       <div className="ranking-podium">
         {[RANKINGS[1], RANKINGS[0], RANKINGS[2]].map((entry, index) => (
