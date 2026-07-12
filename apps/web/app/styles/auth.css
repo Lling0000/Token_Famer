@@ -14,7 +14,7 @@
   z-index: -2;
   inset: 0;
   content: '';
-  background: #557a4a url('/assets/token-farm-background-animated.webp') center / cover no-repeat;
+  background: #557a4a url('/assets/token-farm-background.webp') center / cover no-repeat;
 }
 .auth-screen::after,
 .onboarding-screen::after {
@@ -96,6 +96,8 @@
     12px 14px 0 rgba(16, 47, 34, 0.44),
     var(--shadow);
   transform: translateY(-50%);
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
 }
 .auth-form-heading h2 {
   margin: 8px 0 5px;
@@ -121,6 +123,59 @@
   justify-content: space-between;
   gap: 10px;
   margin-top: 18px;
+}
+.auth-feedback {
+  margin: 0;
+  padding: 9px 10px;
+  border: 2px solid;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.auth-feedback.error {
+  color: #8e352b;
+  background: #f6ddd3;
+  border-color: #c87a64;
+}
+.auth-feedback.success {
+  color: #285f45;
+  background: #dfeedd;
+  border-color: #79a47e;
+}
+.sandbox-invite-note,
+.sandbox-code {
+  padding: 8px 10px;
+  color: #6d5220;
+  background: #f4df9c;
+  border: 2px solid #c5a34d;
+  font-size: 11px;
+}
+.sandbox-invite-note code,
+.sandbox-code b {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+.totp-setup {
+  display: grid;
+  grid-template-columns: 1fr 36px;
+  gap: 7px;
+  padding: 10px;
+  background: #e8ede2;
+  border: 2px solid #aebca9;
+}
+.totp-setup > span {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+}
+.totp-setup code {
+  align-self: center;
+  overflow: hidden;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
 }
 .text-command {
   min-height: 30px;

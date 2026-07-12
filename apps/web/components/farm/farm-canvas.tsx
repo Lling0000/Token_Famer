@@ -47,7 +47,7 @@ const BACKGROUND_WIDTH = 1536;
 const BACKGROUND_HEIGHT = 1024;
 const BACKGROUND_PLOT_ORIGIN = { x: 834, y: 245 };
 const BACKGROUND_GRID_STEP = { x: 119, y: 60 };
-const PLOT_HALF_SIZE = BACKGROUND_GRID_STEP;
+const PLOT_HALF_SIZE = { x: 116, y: 58 };
 const BACKGROUND_PLOT_CENTERS = Array.from({ length: 25 }, (_, index) => {
   const row = Math.floor(index / 5);
   const column = index % 5;
@@ -153,6 +153,7 @@ export function FarmCanvas({ plots, activeTool, selectedPlotId, onPlotClick }: F
         aria-label="24格等距 Token 农场"
         data-active-tool={activeTool}
         data-land-layout="ground-anchored"
+        data-plot-footprint="116x58"
         data-selection-style="edge-glow"
         draggable={false}
       />
@@ -239,8 +240,7 @@ function drawPlot(
     );
   }
   if (!plot.unlocked) drawLock(context, center.x, center.y - 2, project.scale);
-  if (plot.watered && plot.unlocked)
-    drawWater(context, center.x, center.y, halfWidth, halfHeight, time);
+  if (plot.watered && plot.unlocked) drawWater(context, center.x, center.y, halfWidth, halfHeight);
   if (plot.cropId) drawCrop(context, plot, center.x, center.y, project.scale, time);
   if (plot.issue)
     drawIssue(
@@ -296,28 +296,25 @@ function drawPlotHighlight(
 ) {
   context.save();
   context.lineJoin = 'miter';
-  context.strokeStyle = selected ? '#ffe681' : 'rgba(255, 255, 255, .72)';
-  context.lineWidth = (selected ? 3 : 2) * Math.max(1, scale);
   if (selected) {
-    context.shadowColor = '#ffd45f';
-    context.shadowBlur = 12 * Math.max(1, scale);
+    context.shadowColor = '#ffd34f';
+    context.shadowBlur = 7 * Math.max(1, scale);
   }
+  context.strokeStyle = selected ? '#ffe88a' : 'rgba(255, 255, 255, .72)';
+  context.lineWidth = (selected ? 2.5 : 1.5) * Math.max(1, scale);
   strokeDiamond(context, x, y, width, height);
   context.restore();
 }
 
-// eslint-disable-next-line max-params -- Animated water rendering uses scalar geometry every frame.
 function drawWater(
   context: CanvasRenderingContext2D,
   x: number,
   y: number,
   width: number,
   height: number,
-  time: number,
 ) {
-  const alpha = 0.34 + Math.sin(time / 550) * 0.07;
   context.save();
-  context.fillStyle = `rgba(117, 222, 236, ${alpha})`;
+  context.fillStyle = 'rgba(117, 222, 236, .34)';
   const droplets = [
     { x: -0.52, y: -0.08 },
     { x: 0.45, y: 0.12 },

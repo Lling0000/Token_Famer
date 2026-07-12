@@ -20,6 +20,7 @@ import { registerSocialCareRoutes } from './routes/social-care';
 const statusForError = (error: Error): number => {
   if (error instanceof ZodError) return 400;
   if (/Bearer API key/.test(error.message)) return 401;
+  if (/Email or password|Two-factor code/.test(error.message)) return 401;
   if (/not allowed/.test(error.message)) return 403;
   if (/not found|missing/.test(error.message)) return 404;
   if (/Insufficient|not available|not mature|cannot|already/.test(error.message)) return 409;

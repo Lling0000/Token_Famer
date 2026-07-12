@@ -4,6 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { buildApp } from './app';
+import { createTotpCode } from './auth-crypto';
 import { loadConfig } from './config';
 
 const databaseUrl =
@@ -91,7 +92,77 @@ describe('Token Farmer HTTP contracts', () => {
     const after = await walletBalance(app, 'gpt-5.4-mini');
     expect(after - before).toBe(100_000n);
   });
+
+  it('completes invited registration, verification, 2FA login, session restore and logout', async () => {
+    const email = `farmer-${randomUUID()}@example.com`;
+    const password = 'Farm-Password-2026!';
+    const registered = await app.inject({
+      method: 'POST',
+      url: '/api/auth/register',
+      headers: { 'idempotency-key': `register-${randomUUID()}` },
+      payload: { inviteCode: 'TOKEN-FARMER-ALPHA', email, displayName: '契约农场主', password },
+    });
+    expect(registered.statusCode).toBe(200);
+    const registration = registered.json<{
+      totpUri: string;
+      sandboxVerificationCode: string;
+    }>();
+    expect(registration.sandboxVerificationCode).toMatch(/^\d{6}$/);
+
+    const verified = await app.inject({
+      method: 'POST',
+      url: '/api/auth/verify-email',
+      headers: { 'idempotency-key': `verify-${randomUUID()}` },
+      payload: { email, code: registration.sandboxVerificationCode },
+    });
+    expect(verified.statusCode).toBe(200);
+    const secret = new URL(registration.totpUri).searchParams.get('secret');
+    expect(secret).toBeTruthy();
+    const login = await loginWithTotp(app, email, password, secret!);
+    expect(login.body.firstLoginGrant).toBe(true);
+
+    const session = await app.inject({
+      method: 'GET',
+      url: '/api/auth/session',
+      headers: { cookie: login.cookie },
+    });
+    expect(session.statusCode).toBe(200);
+    expect(session.json().displayName).toBe('契约农场主');
+
+    const secondLogin = await loginWithTotp(app, email, password, secret!);
+    expect(secondLogin.body.firstLoginGrant).toBe(false);
+    const logout = await app.inject({
+      method: 'POST',
+      url: '/api/auth/logout',
+      headers: { cookie: login.cookie, 'idempotency-key': `logout-${randomUUID()}` },
+    });
+    expect(logout.statusCode).toBe(200);
+    const expired = await app.inject({
+      method: 'GET',
+      url: '/api/auth/session',
+      headers: { cookie: login.cookie },
+    });
+    expect(expired.statusCode).toBe(401);
+  });
 });
+
+const loginWithTotp = async (
+  app: FastifyInstance,
+  email: string,
+  password: string,
+  secret: string,
+) => {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/auth/login',
+    headers: { 'idempotency-key': `login-${randomUUID()}` },
+    payload: { email, password, totp: createTotpCode(secret, new Date()) },
+  });
+  expect(response.statusCode).toBe(200);
+  const cookie = response.headers['set-cookie'];
+  expect(cookie).toContain('tf_session=');
+  return { body: response.json<{ firstLoginGrant: boolean }>(), cookie: cookie! };
+};
 
 const walletBalance = async (app: FastifyInstance, modelId: string): Promise<bigint> => {
   const response = await app.inject({ method: 'GET', url: '/api/bootstrap' });

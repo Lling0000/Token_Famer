@@ -56,6 +56,9 @@ const totpAtCounter = (secret: string, counter: bigint): string => {
   return binary.toString().padStart(6, '0');
 };
 
+export const createTotpCode = (secret: string, now: Date): string =>
+  totpAtCounter(secret, BigInt(Math.floor(now.getTime() / 30_000)));
+
 export const createTotpSecret = (): string => encodeBase32(randomBytes(20));
 
 export const verifyTotp = (code: string, secret: string, now: Date): boolean => {

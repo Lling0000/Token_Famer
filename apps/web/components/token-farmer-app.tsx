@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AuthScreen } from './auth/auth-screen';
 import { OnboardingScreen } from './auth/onboarding-screen';
 import { DesktopRequired } from './desktop-required';
@@ -20,6 +20,7 @@ import { currentUtcMs } from '@/lib/browser-clock';
 import { applyFarmAction, createFarmPlots, getPlotPhase } from '@/lib/game-engine';
 import { useGameAudio } from '@/lib/use-game-audio';
 import { useGameShop } from '@/lib/use-game-shop';
+import { useAuthTransition } from '@/lib/use-auth-transition';
 import type {
   FarmPlot,
   FarmTool,
@@ -30,7 +31,7 @@ import type {
   VisitorAction,
 } from '@/lib/game-types';
 
-// eslint-disable-next-line max-lines-per-function -- The app shell coordinates local demo adapters; server-backed state will replace this composition boundary.
+// eslint-disable-next-line max-lines-per-function, complexity -- The composition root coordinates mutually exclusive app screens and demo adapters.
 export function TokenFarmerApp() {
   const [screen, setScreen] = useState<'auth' | 'onboarding' | 'game'>('auth');
   const [nickname, setNickname] = useState('新农场主');
@@ -54,6 +55,7 @@ export function TokenFarmerApp() {
   const [nowMs, setNowMs] = useState(currentUtcMs);
   const { muted, toggleMuted, playFarmEffect, playDogBark } = useGameAudio(screen === 'game');
   const shop = useGameShop({ balance, setBalance, setToast, playDogBark, nowMs });
+  const enterAuthenticated = useAuthTransition(setNickname, setScreen);
 
   useEffect(() => {
     if (screen !== 'game') return;
@@ -85,10 +87,7 @@ export function TokenFarmerApp() {
   }, [farmDestination]);
 
   const visiblePlots = visitingFriend ? friendPlots : plots;
-  const selectedPlot = useMemo(
-    () => visiblePlots.find((plot) => plot.id === selectedPlotId) ?? null,
-    [visiblePlots, selectedPlotId],
-  );
+  const selectedPlot = visiblePlots.find((plot) => plot.id === selectedPlotId) ?? null;
   const enterDemo = () => {
     const currentTime = currentUtcMs();
     setNickname('演示农场主');
@@ -286,7 +285,7 @@ export function TokenFarmerApp() {
       <DesktopRequired />
       <div className="desktop-app">
         {screen === 'auth' && (
-          <AuthScreen onContinue={() => setScreen('onboarding')} onDemo={enterDemo} />
+          <AuthScreen onAuthenticated={enterAuthenticated} onDemo={enterDemo} />
         )}
         {screen === 'onboarding' && <OnboardingScreen onComplete={completeOnboarding} />}
         {screen === 'game' && (
@@ -305,7 +304,7 @@ export function TokenFarmerApp() {
             <main className={sidebarCollapsed ? 'game-main sidebar-collapsed' : 'game-main'}>
               <section className="farm-stage">
                 <div className="farm-backdrop" aria-hidden="true" />
-                <FarmDecoration decoration={shop.equippedDecoration} onDogBark={playDogBark} />
+                <FarmDecoration decoration={shop.equippedDecoration} />
                 <FarmCanvas
                   plots={visiblePlots}
                   activeTool={activeTool}

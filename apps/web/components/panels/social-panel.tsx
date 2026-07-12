@@ -1,7 +1,8 @@
 'use client';
 
-import { Check, Copy, Dog, Link2, Save, ShieldCheck, UserPlus, Users } from 'lucide-react';
+import { Check, Copy, Dog, Link2, LogOut, Save, ShieldCheck, UserPlus, Users } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { useAccountLogout } from '@/lib/use-account-logout';
 import { PanelShell } from './panel-shell';
 
 // eslint-disable-next-line max-lines-per-function -- The social dialog is presentation-only and contains no policy calculation.
@@ -19,6 +20,7 @@ export function SocialPanel({
   const [requestSent, setRequestSent] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const [pranksAllowed, setPranksAllowed] = useState(true);
+  const accountLogout = useAccountLogout();
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -164,6 +166,22 @@ export function SocialPanel({
           同一好友同一茬最多尝试偷取一次，结果由服务端概率规则结算。
         </div>
       </section>
+      <div className="account-session-actions">
+        <span>
+          <b>当前账号会话</b>
+          <small>退出后需要邮箱、密码和 2FA 动态码重新登录。</small>
+        </span>
+        {accountLogout.error && <small role="alert">{accountLogout.error}</small>}
+        <button
+          className="secondary-command"
+          type="button"
+          disabled={accountLogout.busy}
+          onClick={() => void accountLogout.logout()}
+        >
+          <LogOut size={16} />
+          {accountLogout.busy ? '正在退出' : '退出账号'}
+        </button>
+      </div>
     </PanelShell>
   );
 }

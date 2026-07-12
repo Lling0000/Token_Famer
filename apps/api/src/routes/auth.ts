@@ -1,6 +1,6 @@
 import { randomBytes, randomInt } from 'node:crypto';
 
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
@@ -17,6 +17,7 @@ import {
 import { createTotpSecret, hashPassword, verifyPassword, verifyTotp } from '../auth-crypto';
 import type { AppConfig } from '../config';
 import { requireIdempotencyKey } from '../http/idempotency';
+import { expiredSessionCookie, resolveSession, sessionCookie } from '../http/session-auth';
 import { UNIFIED_CREDIT_ACCOUNT } from '../repositories/credit-wallet';
 import { decryptField, encryptField, hashSecret } from '../security';
 
@@ -34,7 +35,11 @@ const verifyEmailSchema = z.object({
   email: z.string().email(),
   code: z.string().regex(/^\d{6}$/),
 });
-const loginSchema = z.object({ email: z.string().email(), password: z.string(), totp: z.string() });
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(12).max(128),
+  totp: z.string().regex(/^\d{6}$/),
+});
 
 const grantWelcomeTokens = async (
   transaction: DatabaseTransaction,
@@ -81,6 +86,8 @@ export const ensureSandboxInvitation = async (db: Database, config: AppConfig): 
     .onConflictDoNothing();
 };
 
+const usesSecureCookies = (config: AppConfig): boolean => config.CORS_ORIGIN.startsWith('https://');
+
 // eslint-disable-next-line max-lines-per-function -- Keeps the three tightly coupled invitation authentication endpoints discoverable.
 export const registerAuthRoutes = async (
   app: FastifyInstance,
@@ -92,10 +99,14 @@ export const registerAuthRoutes = async (
     requireIdempotencyKey(request.headers);
     const body = registerSchema.parse(request.body);
     const now = new Date();
+    const existingUser = await db.query.users.findFirst({ where: eq(users.email, body.email) });
+    if (existingUser) throw new Error('Email is already registered');
     const invitation = await db.query.invitations.findFirst({
       where: eq(invitations.codeHash, hashSecret(body.inviteCode, config.BETTER_AUTH_SECRET)),
     });
-    if (!invitation || invitation.usedAt || invitation.expiresAt <= now)
+    const reusableSandboxInvite =
+      config.UPSTREAM_MODE === 'mock' && body.inviteCode === 'TOKEN-FARMER-ALPHA';
+    if (!invitation || (!reusableSandboxInvite && invitation.usedAt) || invitation.expiresAt <= now)
       throw new Error('Invitation is invalid or expired');
     const secret = createTotpSecret();
     const verificationCode = randomInt(100_000, 1_000_000).toString();
@@ -116,10 +127,14 @@ export const registerAuthRoutes = async (
         .returning({ id: users.id, email: users.email });
       const created = inserted[0];
       if (!created) throw new Error('Account insert failed');
-      await transaction
-        .update(invitations)
-        .set({ usedAt: now, usedBy: created.id })
-        .where(eq(invitations.id, invitation.id));
+      if (!reusableSandboxInvite) {
+        const consumed = await transaction
+          .update(invitations)
+          .set({ usedAt: now, usedBy: created.id })
+          .where(and(eq(invitations.id, invitation.id), isNull(invitations.usedAt)))
+          .returning({ id: invitations.id });
+        if (consumed.length === 0) throw new Error('Invitation is invalid or expired');
+      }
       await transaction.insert(wallets).values({
         userId: created.id,
         modelId: UNIFIED_CREDIT_ACCOUNT,
@@ -137,7 +152,7 @@ export const registerAuthRoutes = async (
       userId: user.id,
       email: user.email,
       totpUri: `otpauth://totp/Token%20Farmer:${encodeURIComponent(user.email)}?secret=${secret}&issuer=Token%20Farmer`,
-      ...(config.NODE_ENV === 'production' ? {} : { sandboxVerificationCode: verificationCode }),
+      ...(config.UPSTREAM_MODE === 'mock' ? { sandboxVerificationCode: verificationCode } : {}),
     };
   });
 
@@ -158,7 +173,7 @@ export const registerAuthRoutes = async (
         and(
           eq(users.email, body.email.toLowerCase()),
           eq(users.emailVerificationCodeHash, hashSecret(body.code, config.BETTER_AUTH_SECRET)),
-          sql`${users.emailVerificationExpiresAt} > ${now}`,
+          gt(users.emailVerificationExpiresAt, now),
         ),
       )
       .returning({ id: users.id });
@@ -166,7 +181,7 @@ export const registerAuthRoutes = async (
     return { verified: true };
   });
 
-  app.post('/api/auth/login', async (request) => {
+  app.post('/api/auth/login', async (request, reply) => {
     requireIdempotencyKey(request.headers);
     const body = loginSchema.parse(request.body);
     const user = await db.query.users.findFirst({
@@ -192,6 +207,35 @@ export const registerAuthRoutes = async (
       });
       return granted;
     });
-    return { sessionToken, expiresInSeconds: 2_592_000, firstLoginGrant };
+    const expiresInSeconds = 2_592_000;
+    reply.header(
+      'Set-Cookie',
+      sessionCookie(sessionToken, expiresInSeconds, usesSecureCookies(config)),
+    );
+    return {
+      expiresInSeconds,
+      firstLoginGrant,
+      email: user.email,
+      displayName: user.displayName,
+    };
+  });
+
+  app.get('/api/auth/session', async (request, reply) => {
+    const session = await resolveSession(db, config, request.headers.cookie, new Date());
+    if (!session) return reply.status(401).send({ authenticated: false });
+    return {
+      authenticated: true,
+      email: session.email,
+      displayName: session.displayName,
+      expiresAt: session.expiresAt.toISOString(),
+    };
+  });
+
+  app.post('/api/auth/logout', async (request, reply) => {
+    requireIdempotencyKey(request.headers);
+    const session = await resolveSession(db, config, request.headers.cookie, new Date());
+    if (session) await db.delete(sessions).where(eq(sessions.id, session.id));
+    reply.header('Set-Cookie', expiredSessionCookie(usesSecureCookies(config)));
+    return { loggedOut: true };
   });
 };

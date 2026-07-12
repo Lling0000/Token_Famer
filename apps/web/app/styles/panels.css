@@ -1206,6 +1206,29 @@
   border-radius: 3px;
   font-size: 10px;
 }
+.account-session-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  color: #31493d;
+  background: #e9ece1;
+  border: 2px solid #c4ccbd;
+  border-radius: 2px;
+}
+.account-session-actions > span {
+  display: grid;
+  gap: 2px;
+}
+.account-session-actions small {
+  color: #77847c;
+  font-size: 11px;
+}
+.account-session-actions > small[role='alert'] {
+  color: #a54432;
+}
 
 @media (max-width: 1350px) {
   .game-panel.wide {

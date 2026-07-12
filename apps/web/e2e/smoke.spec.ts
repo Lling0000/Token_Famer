@@ -9,12 +9,17 @@ test('opens a playable desktop farm from demo mode', async ({ page }) => {
   await expect(page.getByRole('button', { name: '一键收获' })).toBeVisible();
   const canvas = page.getByLabel('24格等距 Token 农场');
   await expect(canvas).toHaveAttribute('data-land-layout', 'ground-anchored');
+  await expect(canvas).toHaveAttribute('data-plot-footprint', '116x58');
   await expect(canvas).toHaveAttribute('data-selection-style', 'edge-glow');
   await expect(canvas).toHaveAttribute('draggable', 'false');
   await expect(page.locator('.plot-inspector')).toHaveCount(0);
   await expect(page.locator('.selected-seed-hud')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: '让巡逻萌犬叫一声' })).toBeVisible();
-  await expect(page.locator('.stream-glint')).toHaveCount(3);
+  await expect(page.locator('.farm-backdrop')).toHaveCSS(
+    'background-image',
+    /token-farm-background\.webp/,
+  );
+  await expect(page.locator('.farm-dog-route')).toHaveCount(0);
+  await expect(page.locator('.stream-glint')).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: '浇水' }).locator('.lucide-paint-bucket'),
   ).toBeVisible();
@@ -28,6 +33,67 @@ test('opens a playable desktop farm from demo mode', async ({ page }) => {
   await expect(page.getByRole('dialog', { name: '选择要播种的花种' })).toBeVisible();
   await expect(page.getByRole('button', { name: /ChatGPT 花苗.*免费/ })).toBeVisible();
   await expect(page.getByRole('button', { name: '下一页花种' })).toBeEnabled();
+});
+
+test('completes the invited registration and 2FA login interface', async ({ page }) => {
+  await page.route('**/api/auth/**', async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/session'))
+      return route.fulfill({ status: 401, json: { authenticated: false } });
+    if (path.endsWith('/register')) {
+      return route.fulfill({
+        json: {
+          userId: 'user-test',
+          email: 'new@example.com',
+          totpUri:
+            'otpauth://totp/Token%20Farmer:new@example.com?secret=ABCDEFGHIJKLMNOP&issuer=Token%20Farmer',
+          sandboxVerificationCode: '123456',
+        },
+      });
+    }
+    if (path.endsWith('/verify-email')) return route.fulfill({ json: { verified: true } });
+    return route.fulfill({
+      json: {
+        expiresInSeconds: 2_592_000,
+        firstLoginGrant: true,
+        email: 'new@example.com',
+        displayName: '像素新农场主',
+      },
+    });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: '持有邀请码，创建账号' }).click();
+  await page.getByLabel('邀请码').fill('TOKEN-FARMER-ALPHA');
+  await page.getByLabel('农场主昵称').fill('像素新农场主');
+  await page.getByLabel('邮箱').fill('new@example.com');
+  await page.getByLabel('密码', { exact: true }).fill('Farm-Password-2026!');
+  await page.getByLabel('确认密码').fill('Farm-Password-2026!');
+  await page.getByRole('button', { name: /创建并验证/ }).click();
+  await expect(page.getByText('ABCDEFGHIJKLMNOP')).toBeVisible();
+  await expect(page.getByText(/123456/)).toBeVisible();
+  await page.getByLabel('邮箱验证码').fill('123456');
+  await page.getByRole('button', { name: /完成邮箱验证/ }).click();
+  await page.getByLabel('两步验证码').fill('654321');
+  await page.getByRole('button', { name: /登录农场/ }).click();
+  await expect(page.getByRole('heading', { name: '你的第一袋 Token 种子' })).toBeVisible();
+});
+
+test('shows actionable localized authentication errors', async ({ page }) => {
+  await page.route('**/api/auth/**', async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/session'))
+      return route.fulfill({ status: 401, json: { authenticated: false } });
+    return route.fulfill({
+      status: 401,
+      json: { error: { code: 'UNAUTHORIZED', message: 'Email or password is invalid' } },
+    });
+  });
+  await page.goto('/');
+  await page.getByLabel('邮箱').fill('wrong@example.com');
+  await page.getByLabel('密码').fill('Wrong-Password-2026!');
+  await page.getByLabel('两步验证码').fill('123456');
+  await page.getByRole('button', { name: /登录农场/ }).click();
+  await expect(page.locator('.auth-feedback.error')).toHaveText('邮箱或密码错误。');
 });
 
 test('shows a tool cursor on land and plot details only after a plot click', async ({ page }) => {
@@ -51,8 +117,39 @@ test('shows a tool cursor on land and plot details only after a plot click', asy
   await page.locator('.tool-button').nth(0).click();
   await canvas.click({ position: center });
   await expect(page.locator('.plot-inspector')).toBeVisible();
+  const selectedEdgePixels = await canvas.evaluate(
+    (element: HTMLCanvasElement, geometry) => {
+      const context = element.getContext('2d');
+      if (!context) return 0;
+      const ratio = element.width / element.getBoundingClientRect().width;
+      const vertexX = Math.round(geometry.center.x * ratio);
+      const vertexY = Math.round((geometry.center.y - 58 * geometry.scale) * ratio);
+      const pixels = context.getImageData(vertexX - 4, vertexY - 4, 9, 9).data;
+      let highlighted = 0;
+      for (let index = 0; index < pixels.length; index += 4) {
+        if (pixels[index]! > 180 && pixels[index + 1]! > 130 && pixels[index + 3]! > 80)
+          highlighted += 1;
+      }
+      return highlighted;
+    },
+    { center, scale },
+  );
+  expect(selectedEdgePixels).toBeGreaterThan(0);
   await canvas.click({ position: { x: 8, y: 8 } });
   await expect(page.locator('.plot-inspector')).toHaveCount(0);
+});
+
+test('logs out from account settings and returns to authentication', async ({ page }) => {
+  await page.route('**/api/auth/**', async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/logout')) return route.fulfill({ json: { loggedOut: true } });
+    return route.fulfill({ status: 401, json: { authenticated: false } });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: '进入演示农场' }).click();
+  await page.getByTitle('账号与社交设置').click();
+  await page.getByRole('button', { name: '退出账号' }).click();
+  await expect(page.getByRole('heading', { name: '回到你的农场' })).toBeVisible();
 });
 
 test('uses branded model picker and supports profile and sidebar controls', async ({ page }) => {
