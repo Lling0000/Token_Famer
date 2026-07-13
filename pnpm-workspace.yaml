@@ -1,0 +1,12 @@
+packages:
+  - apps/*
+  - modules/*
+  - packages/*
+
+injectWorkspacePackages: true
+
+onlyBuiltDependencies:
+  - '@scarf/scarf'
+  - better-sqlite3
+  - esbuild
+  - sharp

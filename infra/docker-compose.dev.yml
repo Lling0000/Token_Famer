@@ -1,0 +1,42 @@
+name: token-farmer-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: token_farmer
+      POSTGRES_USER: token_farmer
+      POSTGRES_PASSWORD: token_farmer
+    ports:
+      - '127.0.0.1:5433:5432'
+    volumes:
+      - token_farmer_postgres_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U token_farmer -d token_farmer']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '127.0.0.1:6380:6379'
+    volumes:
+      - token_farmer_redis_dev:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    profiles: ['mail']
+    ports:
+      - '127.0.0.1:1025:1025'
+      - '127.0.0.1:8025:8025'
+
+volumes:
+  token_farmer_postgres_dev:
+  token_farmer_redis_dev:

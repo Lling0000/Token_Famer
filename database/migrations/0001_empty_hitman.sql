@@ -1,0 +1,1 @@
+ALTER TABLE "steal_attempts" ADD COLUMN "outcome" text NOT NULL;

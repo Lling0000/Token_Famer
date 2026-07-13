@@ -1,0 +1,16 @@
+{
+  "name": "@token-farmer/wallet",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@token-farmer/primitives": "workspace:*"
+  }
+}

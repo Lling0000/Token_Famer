@@ -1,0 +1,11 @@
+# Default owner and sensitive subsystem reviewers.
+* @Lling0000
+
+/modules/wallet/ @Lling0000
+/modules/payment/ @Lling0000
+/modules/gateway/ @Lling0000
+/database/ @Lling0000
+/docs/security.md @Lling0000
+/docs/specs/economy.md @Lling0000
+/infra/ @Lling0000
+/.github/ @Lling0000

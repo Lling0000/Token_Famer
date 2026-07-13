@@ -1,0 +1,1 @@
+ALTER TABLE "crop_catalog" ADD COLUMN "base_reward_tokens" numeric(38, 0) DEFAULT 0 NOT NULL;

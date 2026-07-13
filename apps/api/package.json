@@ -1,0 +1,34 @@
+{
+  "name": "@token-farmer/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "build": "tsup",
+    "start": "node dist/server.js",
+    "test:unit": "vitest run"
+  },
+  "dependencies": {
+    "@fastify/cors": "latest",
+    "@fastify/rate-limit": "latest",
+    "@fastify/sensible": "latest",
+    "@token-farmer/contracts": "workspace:*",
+    "@token-farmer/db-runtime": "workspace:*",
+    "@token-farmer/farm": "workspace:*",
+    "@token-farmer/gateway": "workspace:*",
+    "@token-farmer/primitives": "workspace:*",
+    "@token-farmer/social": "workspace:*",
+    "@token-farmer/wallet": "workspace:*",
+    "drizzle-orm": "latest",
+    "fastify": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "tsup": "8.5.0",
+    "tsx": "latest",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

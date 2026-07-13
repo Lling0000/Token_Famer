@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "useUnknownInCatchVariables": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@token-farmer/primitives": ["packages/primitives/src/index.ts"],
+      "@token-farmer/contracts": ["packages/contracts/src/index.ts"],
+      "@token-farmer/db-runtime": ["packages/db-runtime/src/index.ts"],
+      "@token-farmer/auth": ["modules/auth/index.ts"],
+      "@token-farmer/wallet": ["modules/wallet/index.ts"],
+      "@token-farmer/gateway": ["modules/gateway/index.ts"],
+      "@token-farmer/farm": ["modules/farm/index.ts"],
+      "@token-farmer/social": ["modules/social/index.ts"],
+      "@token-farmer/payment": ["modules/payment/index.ts"],
+      "@token-farmer/leaderboard": ["modules/leaderboard/index.ts"],
+      "@token-farmer/admin": ["modules/admin/index.ts"]
+    }
+  },
+  "exclude": ["**/dist/**", "**/.next/**", "**/node_modules/**"]
+}
