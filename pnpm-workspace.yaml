@@ -3,6 +3,8 @@ packages:
   - modules/*
   - packages/*
 
+injectWorkspacePackages: true
+
 onlyBuiltDependencies:
   - '@scarf/scarf'
   - better-sqlite3

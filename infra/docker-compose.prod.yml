@@ -29,7 +29,11 @@ services:
       retries: 10
 
   migrate:
-    image: ${API_IMAGE:-token-farmer-api:local}
+    image: ${MIGRATE_IMAGE:-token-farmer-migrate:local}
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.api
+      target: migrate
     restart: 'no'
     env_file: ${ENV_FILE:-.env.production}
     command: ['pnpm', 'db:deploy']
@@ -42,6 +46,7 @@ services:
     build:
       context: ..
       dockerfile: infra/docker/Dockerfile.api
+      target: runtime
     restart: unless-stopped
     env_file: ${ENV_FILE:-.env.production}
     depends_on:
