@@ -178,7 +178,7 @@ compose() {
   docker compose --env-file /opt/token-farmer/.env.production \
     -f infra/docker-compose.prod.yml "$@"
 }
-compose pull web api worker
+compose pull web api worker migrate
 compose images --format json > "/opt/token-farmer/release-state/$RELEASE_SHA-images.json"
 ```
 
@@ -192,8 +192,8 @@ compose ps
 迁移必须是 expand/backfill 兼容迁移：
 
 ```bash
-compose run --rm api pnpm db:migrate:deploy
-compose run --rm api pnpm db:check
+compose run -T --rm migrate
+compose run -T --rm migrate pnpm db:check
 ```
 
 任何命令失败立即停止，不启动新应用。不要手工修迁移表；先查日志和迁移 Spec，必要时按备份恢复。
