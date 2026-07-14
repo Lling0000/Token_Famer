@@ -102,6 +102,20 @@ Idempotency-Key: <16-128 printable ASCII chars>
 
 以下路径省略 `/api/v1` 前缀。请求/响应具体字段由 `packages/contracts` 的 Zod Schema 生成文档并接受契约测试。
 
+### 7.0 当前实现补充端点
+
+下表只补记当前代码已经注册、但尚未纳入后续版本化资源合同的端点。表中 Path 是完整字面路径，不继承 `/api/v1`。这些实现状态不替代、删除或降级 7.1 至 7.6 节的正式合同。
+
+| Method | 完整 Path                              | 范围                                 | 当前行为                                                          |
+| ------ | -------------------------------------- | ------------------------------------ | ----------------------------------------------------------------- |
+| GET    | `/health/live`                         | 运维/内部用途；当前经 Caddy 公开反代 | 进程存活探针，返回 `status: ok`                                   |
+| GET    | `/health/ready`                        | 运维/内部用途；当前经 Caddy 公开反代 | 检查 PostgreSQL，并返回就绪状态与当前上游模式                     |
+| GET    | `/api/auth/session`                    | 用户端                               | 用会话 Cookie 查询登录状态；无有效会话时返回 `401`                |
+| GET    | `/api/bootstrap`                       | 沙箱                                 | 读取固定沙箱用户的资料、模型、钱包、地块、好友和 Token 包启动快照 |
+| POST   | `/api/plots/:plotId/clear`             | 沙箱                                 | 要求 `Idempotency-Key`，清理固定沙箱用户处于可清理状态的地块      |
+| GET    | `/api/payments/orders`                 | 沙箱                                 | 列出固定沙箱用户的订单                                            |
+| POST   | `/api/payments/mock/:orderId/complete` | 沙箱 Mock 支付                       | 要求 `Idempotency-Key`；订单状态保证重复完成不重复入账            |
+
 ### 7.1 Auth
 
 | Method | Path                    | 行为                                 |
