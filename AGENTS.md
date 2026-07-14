@@ -4,13 +4,12 @@ Token Farmer is an invite-only, desktop-browser farming game backed by one unifi
 
 The repository is a pnpm 10.14.0 TypeScript monorepo running on Node.js 22:
 
-- `apps/web`: Next.js and Phaser desktop client. It never connects to PostgreSQL or Redis.
+- `apps/web`: Next.js and native Canvas 2D desktop client. It never connects to PostgreSQL or Redis.
 - `apps/api`: Fastify HTTP and model-compatible API composition root.
 - `apps/worker`: BullMQ jobs and scheduled projections.
 - `modules/*`: business modules (`auth`, `wallet`, `gateway`, `farm`, `social`, `payment`, `leaderboard`, `admin`).
 - `packages/primitives`: IDs, integer Token values, UTC time values, and shared errors.
 - `packages/contracts`: Zod wire contracts and public DTOs.
-- `packages/ui`: presentation-only React components.
 - `packages/db-runtime`: connection and transaction primitives; it must not export business tables.
 - `database`: schemas, generated migrations, fixtures, and migration checks.
 - `infra`: Docker, Caddy, deployment, and operational assets.
@@ -123,7 +122,7 @@ Run the smallest required set while developing and the full required set before 
 | Domain or economy rule                          | `pnpm lint`, `pnpm typecheck`, `pnpm test:unit`, `pnpm test:property`                                                            |
 | Database schema/repository                      | Domain checks plus `pnpm db:check`, `pnpm test:integration`                                                                      |
 | HTTP API or contract                            | Type-check, unit, integration, and `pnpm test:contract`                                                                          |
-| UI or Phaser                                    | Type-check, relevant unit/component tests, `pnpm test:e2e`, required desktop screenshots                                         |
+| UI or Canvas 2D                                 | Type-check, relevant unit/component tests, `pnpm test:e2e`, required desktop screenshots                                         |
 | Auth, wallet, payment, gateway key, or security | Full `pnpm verify` and the security-specific regression cases                                                                    |
 | Infrastructure/deployment                       | `docker compose -f infra/docker-compose.prod.yml config`, image build, health checks, restore test, restart test, and smoke test |
 | Bug fix                                         | The affected matrix row plus a dedicated regression test                                                                         |
