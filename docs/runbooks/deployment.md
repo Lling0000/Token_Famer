@@ -117,9 +117,17 @@ install -d -m 0750 /opt/token-farmer
 install -d -m 0750 /opt/token-farmer/repo
 install -d -m 0700 /opt/token-farmer/backups
 install -d -m 0700 /opt/token-farmer/release-state
+install -d -o root -g root -m 0750 /opt/token-farmer/data
+install -d -o root -g root -m 0750 /opt/token-farmer/config
+install -d -o 70 -g 70 -m 0700 /opt/token-farmer/data/postgres
+install -d -o 999 -g 1000 -m 0700 /opt/token-farmer/data/redis
+install -d -o root -g root -m 0700 /opt/token-farmer/data/caddy
+install -d -o root -g root -m 0700 /opt/token-farmer/config/caddy
 touch /opt/token-farmer/.env.production
 chmod 0600 /opt/token-farmer/.env.production
 ```
+
+以上数字属主对应当前 Compose 镜像系列目前解析出的用户：PostgreSQL `70:70`、Redis `999:1000`；Caddy 当前以 Root 运行，其证书与自动配置目录使用 `root:root`。这些标签没有固定 digest，每次首次部署或重新拉取后都必须在实际镜像中重新核对 UID/GID，不能沿用未知属主。四个服务目录均为 `0700`，父目录为 `0750`。
 
 将私有仓库以只读 Deploy Key 克隆到 `repo`，或上传经过校验的 `RELEASE_SHA` 源码归档。服务器不能保存个人 GitHub Token。Checkout 后验证：
 
@@ -133,10 +141,14 @@ HEAD 必须精确等于 `RELEASE_SHA`，工作区必须干净。
 `.env.production` 至少配置 Compose 所需数据库、Redis、Auth、加密、API Key Pepper、邮件、Mock/Provider、域名和镜像变量。要求：
 
 - `IMAGE_TAG=$RELEASE_SHA`，不能在部署中使用 `main`。
-- `MODEL_PROVIDER=mock`、`PAYMENT_PROVIDER=mock` 是未过门禁的默认值。
-- 生成独立高熵 `AUTH_SECRET`、`API_KEY_PEPPER`、TOTP 加密 Key 和数据库密码。
+- `UPSTREAM_MODE=mock`、`PAYMENT_PROVIDER=mock` 是未过门禁的默认值。
+- 生成相互独立的高熵 `BETTER_AUTH_SECRET`、`API_KEY_PEPPER`、`FIELD_ENCRYPTION_KEY` 和数据库密码。
 - Web 公开变量不包含 Secret。
 - 文件 Owner 是部署用户，Mode 为 `600`；不运行 `cat` 将 Secret 输出到录屏/日志。
+
+> **已知偏差（DEP-02，部署阻断）**：当前 Compose 的四个 `image` 引用读取 `MIGRATE_IMAGE`、`API_IMAGE`、`WORKER_IMAGE` 和 `WEB_IMAGE`，没有使用本手册要求的 `IMAGE_TAG`。仅导出 `IMAGE_TAG` 不会切换发布或回滚镜像；在实现统一的 SHA 镜像合同并用 `docker compose config` 核对前不得上线。
+
+> **已知偏差（DEP-04，部署阻断）**：CLI 的 `--env-file` 只参与 Compose 插值；当前服务级 `env_file` 仍默认解析仓库内不存在的 `infra/.env.production`，不会自动读取 `/opt/token-farmer/.env.production`。配置可能直接失败或让容器读错环境文件；在 Compose 显式接入服务器 Secret 文件前不得部署，也不得把生产 Secret 复制进仓库迁就实现。
 
 校验 Compose，不启动：
 
@@ -148,6 +160,25 @@ docker compose \
   -f infra/docker-compose.prod.yml config --quiet
 ```
 
+首次执行第 9、10 节启动后，校验目录的数字属主、权限、容器可写性和实际挂载来源：
+
+```bash
+stat -c '%u:%g %a %n' \
+  /opt/token-farmer/data/postgres \
+  /opt/token-farmer/data/redis \
+  /opt/token-farmer/data/caddy \
+  /opt/token-farmer/config/caddy
+compose exec -T --user postgres postgres sh -lc 'test -w "$PGDATA"'
+compose exec -T --user redis redis sh -lc 'test -w /data && redis-cli ping'
+compose exec -T caddy sh -lc 'test -w /data && test -w /config'
+for service in postgres redis caddy; do
+  docker inspect --format '{{range .Mounts}}{{println .Source "->" .Destination}}{{end}}' \
+    "$(compose ps -q "$service")"
+done
+```
+
+输出必须对应上述四个 `/opt/token-farmer` bind mount，不能出现替代它们的匿名卷；任一 `test -w` 失败都先修正属主和权限，不继续冒烟。
+
 ## 8. 防火墙与网络
 
 云安全组和 UFW 只允许：
@@ -155,10 +186,11 @@ docker compose \
 - `22/tcp`：优先限制到管理来源 IP。
 - `80/tcp`：Caddy HTTP 到 HTTPS/ACME。
 - `443/tcp`：Caddy HTTPS。
+- `443/udp`：Caddy HTTP/3（QUIC）。
 
-明确移除 `3000`、`3001`、`5432`、`6379`、`8000`、`8081`、`8301` 等公网规则。修改 SSH 防火墙前保持第二个已验证会话，避免锁死。
+明确移除 `3000`、`4000`、`5432`、`6379`、`8000`、`8081`、`8301` 等公网规则。修改 SSH 防火墙前保持第二个已验证会话，避免锁死。
 
-Compose 中 Postgres、Redis、Web、API、Worker、Mock/New API 使用内部网络；只有 Caddy 发布 `80/443`。使用以下命令复查：
+Compose 中 Postgres、Redis、Web、API、Worker、Mock/New API 使用内部网络；只有 Caddy 发布 `80/tcp`、`443/tcp` 和 `443/udp`。使用以下命令复查：
 
 ```bash
 docker compose --env-file /opt/token-farmer/.env.production \
@@ -171,6 +203,8 @@ ss -lntup
 在任何迁移前执行 [`backup-restore.md`](backup-restore.md) 的生产备份，填入 `BACKUP_ID` 并验证 `pg_restore --list`。
 
 拉取固定镜像并记录 digest：
+
+> **已知偏差（DEP-03，部署阻断）**：当前镜像发布矩阵仅包含 Web、API 和 Worker，未包含 Compose 所需的独立 migrate SHA 镜像。`compose pull ... migrate` 因此不能满足“同一批固定产物执行迁移”的门禁；在发布 migrate 镜像或采用同等可审计产物前不得执行以下拉取和生产迁移。
 
 ```bash
 export IMAGE_TAG="$RELEASE_SHA"
@@ -212,9 +246,9 @@ compose logs --since 10m --no-color api worker web caddy
 
 ```bash
 compose exec -T api node -e \
-  "fetch('http://127.0.0.1:3001/health/live').then(r=>{if(!r.ok)process.exit(1)})"
+  "fetch('http://127.0.0.1:4000/health/live').then(r=>{if(!r.ok)process.exit(1)})"
 compose exec -T api node -e \
-  "fetch('http://127.0.0.1:3001/health/ready').then(r=>{if(!r.ok)process.exit(1)})"
+  "fetch('http://127.0.0.1:4000/health/ready').then(r=>{if(!r.ok)process.exit(1)})"
 ```
 
 如果镜像没有 Node 运行时，使用一次性 curl 容器在同一 Compose 网络执行等价检查，不临时公开内部端口。
@@ -228,13 +262,24 @@ printf '%s\n' "$PREVIOUS_SHA" > /opt/token-farmer/release-state/previous-sha
 
 ## 11. 备案前 SSH 隧道验收
 
-不要为了验收绕过备案直接把未备案域名公开。可在本机 PowerShell 建立只绑定本机的隧道，端口按 Compose 的 loopback 预览入口调整：
+不要为了验收绕过备案直接把未备案域名公开。可在本机 PowerShell 建立只绑定本机的隧道，把本地 `8443` 转发到服务器 Caddy 的 `443`：
 
 ```powershell
-ssh -i $Key -N -L 8443:127.0.0.1:8443 $Server
+ssh -i $Key -N -L 8443:127.0.0.1:443 $Server
 ```
 
-通过 `https://localhost:8443` 或运行手册配置的本地 Host 映射完成：邀请注册、邮箱验证、四模型首次赠送、2FA、Key 创建、Mock 模型普通/流式调用、购买、播种、维护、成熟、偷取、收获、激活和三类榜单。
+另开 PowerShell，通过域名 URL 配合 `--resolve` 验证。这样连接目标仍是本机隧道，但 HTTP Host、TLS SNI、证书链和主机名校验都使用正式域名；不要用 `https://localhost:8443` 掩盖证书或路由错误。
+
+```powershell
+curl.exe --fail --show-error `
+  --resolve "tokenfarmer.online:8443:127.0.0.1" `
+  "https://tokenfarmer.online:8443/health/live"
+curl.exe --fail --show-error `
+  --resolve "api.tokenfarmer.online:8443:127.0.0.1" `
+  "https://api.tokenfarmer.online:8443/health/ready"
+```
+
+证书验证通过后，用同样的 Host/SNI 方式完成：邀请注册、邮箱验证、四模型首次赠送、2FA、Key 创建、Mock 模型普通/流式调用、购买、播种、维护、成熟、偷取、收获、激活和三类榜单。
 
 ## 12. DNS、备案和 HTTPS
 
@@ -258,7 +303,7 @@ DNS 目标：
 
 ```bash
 curl -I http://tokenfarmer.online
-curl --fail --show-error https://tokenfarmer.online/health
+curl --fail --show-error https://tokenfarmer.online/health/live
 curl --fail --show-error https://api.tokenfarmer.online/health/ready
 openssl s_client -connect tokenfarmer.online:443 -servername tokenfarmer.online </dev/null
 ```
