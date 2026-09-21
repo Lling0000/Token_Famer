@@ -1,13 +1,11 @@
 import type { FarmActionInput, FarmActionResult, FarmPlot, ModelId, PlotPhase } from './game-types';
 
-const CROP_CYCLE = ['radish', 'carrot', 'cabbage', 'corn', 'lettuce', 'rapeseed'];
+const CROP_CYCLE = ['radish', 'carrot', 'cabbage', 'garlic'];
 const MODEL_CYCLE = [
   'gpt-5.4',
   'claude-sonnet-4-6',
   'gemini-3.1-pro-preview',
-  'gemini-3.5-flash',
-  'gpt-5.6-terra',
-  'claude-sonnet-5',
+  'grok-4.6',
 ] satisfies readonly ModelId[];
 
 export function createFarmPlots(nowMs: number, demo = false): FarmPlot[] {

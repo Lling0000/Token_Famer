@@ -68,20 +68,6 @@ export const MODELS: readonly ModelDefinition[] = [
     brand: 'anthropic',
   },
   {
-    id: 'deepseek-v4-flash',
-    label: 'DeepSeek V4 Flash',
-    shortLabel: 'DS Flash',
-    color: '#287fb8',
-    brand: 'deepseek',
-  },
-  {
-    id: 'deepseek-v4-pro',
-    label: 'DeepSeek V4 Pro',
-    shortLabel: 'DS Pro',
-    color: '#1f5e9d',
-    brand: 'deepseek',
-  },
-  {
     id: 'gemini-3.1-pro-preview',
     label: 'Gemini 3.1 Pro',
     shortLabel: 'Gemini Pro',
@@ -95,7 +81,7 @@ export const MODELS: readonly ModelDefinition[] = [
     color: '#d2a53b',
     brand: 'google',
   },
-  { id: 'glm-5.2', label: 'GLM 5.2', shortLabel: 'GLM 5.2', color: '#45a990', brand: 'zhipu' },
+  { id: 'grok-4.6', label: 'Grok 4.6', shortLabel: 'Grok 4.6', color: '#202323', brand: 'grok' },
   { id: 'gpt-5.5', label: 'GPT-5.5', shortLabel: 'GPT-5.5', color: '#23876f', brand: 'openai' },
   {
     id: 'gpt-5.6-luna',
@@ -121,7 +107,12 @@ export const MODELS: readonly ModelDefinition[] = [
   },
 ] as const;
 
-export const FEATURED_MODELS = MODELS.slice(0, 4);
+export const FEATURED_MODELS = [
+  getRequiredModel('gpt-5.4-mini'),
+  getRequiredModel('claude-sonnet-4-6'),
+  getRequiredModel('gemini-3.1-pro-preview'),
+  getRequiredModel('grok-4.6'),
+] as const;
 
 export const CROPS: readonly CropDefinition[] = [
   {
@@ -171,9 +162,9 @@ export const CROPS: readonly CropDefinition[] = [
   },
   {
     id: 'garlic',
-    modelId: 'deepseek-v4-flash',
+    modelId: 'grok-4.6',
     level: 4,
-    name: 'DeepSeek 花',
+    name: 'Grok 花',
     cost: 100_000n,
     fruitCount: 20,
     durationMs: 10 * MINUTE,
@@ -182,9 +173,9 @@ export const CROPS: readonly CropDefinition[] = [
   },
   {
     id: 'scallion',
-    modelId: 'glm-5.2',
+    modelId: 'gpt-5.5',
     level: 5,
-    name: 'GLM 花',
+    name: 'ChatGPT 5.5 花',
     cost: 210_000n,
     fruitCount: 30,
     durationMs: 20 * MINUTE,
@@ -226,9 +217,9 @@ export const CROPS: readonly CropDefinition[] = [
   },
   {
     id: 'ginger',
-    modelId: 'deepseek-v4-pro',
+    modelId: 'claude-opus-4-7',
     level: 9,
-    name: 'DeepSeek Pro 花',
+    name: 'Claude Opus 4.7 花',
     cost: 1_110_000n,
     fruitCount: 60,
     durationMs: 100 * MINUTE,
@@ -303,8 +294,18 @@ export const CROPS: readonly CropDefinition[] = [
   },
 ] as const;
 
+const SHOP_CROP_IDS = new Set(['radish', 'carrot', 'cabbage', 'garlic']);
+
+export const SHOP_CROPS = CROPS.filter((crop) => SHOP_CROP_IDS.has(crop.id));
+
 export const WELCOME_BALANCE = 80_000n;
 export const DEMO_BALANCE = 44_050_000n;
+
+function getRequiredModel(modelId: ModelId): ModelDefinition {
+  const model = MODELS.find((candidate) => candidate.id === modelId);
+  if (!model) throw new Error(`Missing model definition: ${modelId}`);
+  return model;
+}
 
 export function getCrop(cropId: string | null): CropDefinition | undefined {
   return CROPS.find((crop) => crop.id === cropId);

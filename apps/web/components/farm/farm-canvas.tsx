@@ -5,7 +5,8 @@ import { MousePointer2, PaintBucket, Shovel, SprayCan, Sprout, Wheat } from 'luc
 import { getCrop, getModel } from '@/lib/game-data';
 import { getPlotPhase, getPlotProgress } from '@/lib/game-engine';
 import type { FarmPlot, FarmTool } from '@/lib/game-types';
-import { drawLock, drawModelBloom } from './model-bloom';
+import { getModelPlantVisual } from '../model/model-plant-visual';
+import { drawLock, drawModelPlantSprite } from './model-bloom';
 
 interface FarmCanvasProps {
   plots: FarmPlot[];
@@ -344,6 +345,7 @@ function drawCrop(
   const crop = getCrop(plot.cropId);
   if (!crop) return;
   const model = getModel(plot.modelId ?? 'gpt-5.4-mini');
+  const plantVisual = getModelPlantVisual(model);
   const nowMs = new Date().getTime();
   const phase = getPlotPhase(plot, nowMs);
   const phaseSize = {
@@ -355,34 +357,29 @@ function drawCrop(
     empty: 0,
   }[phase];
   const sway = Math.round(Math.sin(time / 480 + plot.id) * 2) * scale;
-  const positions = [
-    [-22, 1],
-    [0, -9],
-    [22, 1],
-    [-10, 10],
-    [12, 10],
-  ];
+  const positions = [[0, 5]];
   for (const [offsetX, offsetY] of positions) {
     const baseX = x + offsetX * scale;
     const baseY = y + offsetY * scale;
     const height = 28 * phaseSize * scale;
-    context.fillStyle = crop.accent;
+    if (phaseSize > 0.7) {
+      drawModelPlantSprite(context, {
+        x: baseX + sway,
+        baseY: baseY + 11 * scale,
+        height: (phase === 'mature' ? 94 : 78) * scale,
+        brand: model.brand,
+      });
+      continue;
+    }
+    context.fillStyle = plantVisual.stemColor;
     context.fillRect(baseX - 2 * scale, baseY - height, 4 * scale, height);
     if (phaseSize > 0.25) {
-      context.fillStyle = '#4f954c';
+      context.fillStyle = plantVisual.leafEdgeColor;
+      context.fillRect(baseX - 9 * scale + sway, baseY - height * 0.65, 9 * scale, 7 * scale);
+      context.fillRect(baseX + scale + sway, baseY - height * 0.48, 9 * scale, 7 * scale);
+      context.fillStyle = plantVisual.leafColor;
       context.fillRect(baseX - 8 * scale + sway, baseY - height * 0.65, 7 * scale, 5 * scale);
-      context.fillRect(baseX + scale + sway, baseY - height * 0.48, 7 * scale, 5 * scale);
-    }
-    if (phaseSize > 0.7) {
-      const bloomSize = (phase === 'mature' ? 13 : 9) * scale;
-      drawModelBloom(context, {
-        x: baseX + sway,
-        y: baseY - height,
-        size: bloomSize,
-        brand: model.brand,
-        petalColor: model.color,
-        centerColor: crop.color,
-      });
+      context.fillRect(baseX + 2 * scale + sway, baseY - height * 0.48, 7 * scale, 5 * scale);
     }
   }
   if (phase !== 'mature')

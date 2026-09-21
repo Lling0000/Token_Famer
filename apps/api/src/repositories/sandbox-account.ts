@@ -167,7 +167,7 @@ export const ensureSandboxAccount = async (db: Database): Promise<string> => {
           plotId: growingPlot.id,
           ownerId: SANDBOX_FRIEND_ID,
           cropLevel: 8,
-          modelId: 'deepseek-v4-pro',
+          modelId: 'grok-4.6',
           state: 'growing',
           seedCost: 840_000n,
           fruitNum: 40,

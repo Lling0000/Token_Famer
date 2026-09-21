@@ -12,7 +12,7 @@ interface ModelPickerProps {
   onModelChange: (modelId: ModelId) => void;
 }
 
-const BRAND_ORDER: ModelBrand[] = ['openai', 'anthropic', 'google', 'deepseek', 'zhipu'];
+const BRAND_ORDER: ModelBrand[] = ['openai', 'anthropic', 'google', 'grok'];
 
 export function ModelPicker({ modelId, balanceLabel, onModelChange }: ModelPickerProps) {
   const [open, setOpen] = useState(false);
