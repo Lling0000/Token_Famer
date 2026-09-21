@@ -105,7 +105,8 @@ test('shows a tool cursor on land and plot details only after a plot click', asy
   const scale = Math.max(box!.width / 1536, box!.height / 1024);
   const center = {
     x: (box!.width - 1536 * scale) / 2 + 834 * scale,
-    y: (box!.height - 1024 * scale) / 2 + 245 * scale,
+    // Use the second row so the transient demo-loaded notice cannot intercept pointer events.
+    y: (box!.height - 1024 * scale) / 2 + 365 * scale,
   };
 
   await page.getByRole('button', { name: '浇水' }).click();
