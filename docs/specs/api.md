@@ -8,6 +8,8 @@
 
 游戏 API 使用显式 `/api/v1`。兼容 API 按 OpenAI/Anthropic 路径版本化。破坏性游戏合同使用新的路径版本；只新增可选字段属于向后兼容。
 
+公开模型 ID 由 `packages/contracts` 的 `MODEL_IDS` 统一发布；当前允许的品牌只有 OpenAI、Claude、Gemini 和 Grok。移除或新增模型 ID 属于经评审的目录合同变更。
+
 ## 2. 编码、时间与 ID
 
 - 请求和非流式响应为 UTF-8 JSON。

@@ -2,7 +2,7 @@
 
 import { Check, Coins, Dog, Info, Palette, ShoppingCart, Sprout } from 'lucide-react';
 import { useState } from 'react';
-import { CROPS, getModel } from '@/lib/game-data';
+import { SHOP_CROPS, getModel } from '@/lib/game-data';
 import { formatTokenAmount } from '@/lib/game-engine';
 import type { CropDefinition, FarmDecoration } from '@/lib/game-types';
 import { CropPreview } from '../model/crop-preview';
@@ -126,7 +126,7 @@ function SeedCatalog({
         </span>
       </div>
       <div className="crop-grid">
-        {CROPS.map((crop) => (
+        {SHOP_CROPS.map((crop) => (
           <SeedCard
             crop={crop}
             level={level}
@@ -159,7 +159,7 @@ function SeedCard({
       disabled={locked}
       onClick={() => onSelectCrop(crop)}
     >
-      <CropPreview crop={crop} model={getModel(crop.modelId)} />
+      <CropPreview model={getModel(crop.modelId)} />
       <span className="crop-card-title">
         <strong>{crop.name}</strong>
         <small>{crop.level === 0 ? 'FREE' : `LV.${crop.level}`}</small>

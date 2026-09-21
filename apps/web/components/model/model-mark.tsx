@@ -2,10 +2,9 @@ import type { ModelBrand } from '@/lib/game-types';
 
 const BRAND_LABELS: Record<ModelBrand, string> = {
   openai: 'OpenAI',
-  anthropic: 'Anthropic',
-  deepseek: 'DeepSeek',
-  google: 'Google',
-  zhipu: '智谱',
+  anthropic: 'Claude',
+  google: 'Gemini',
+  grok: 'Grok',
 };
 
 export function ModelMark({ brand, color }: { brand: ModelBrand; color: string }) {

@@ -10,9 +10,11 @@
 
 ## 2. 统一 Token Credit 钱包
 
-首发模型目录由 `packages/contracts` 的版本化 `MODEL_IDS` 发布，当前包含 20 个 ID：
+首发模型目录由 `packages/contracts` 的版本化 `MODEL_IDS` 发布，当前包含 18 个 ID，品牌范围限定为 OpenAI、Claude、Gemini 和 Grok：
 
-`claude-fable-5`、`claude-haiku-4-5`、`claude-haiku-4-5-20251001`、`claude-opus-4-6`、`claude-opus-4-7`、`claude-opus-4-8`、`claude-sonnet-4-6`、`claude-sonnet-5`、`deepseek-v4-flash`、`deepseek-v4-pro`、`gemini-3.1-pro-preview`、`gemini-3.5-flash`、`glm-5.2`、`gpt-5.4-mini`、`gpt-5.4`、`gpt-5.5`、`gpt-5.6-luna`、`gpt-5.6-sol`、`gpt-5.6-terra`、`gpt-image-2`。
+`claude-fable-5`、`claude-haiku-4-5`、`claude-haiku-4-5-20251001`、`claude-opus-4-6`、`claude-opus-4-7`、`claude-opus-4-8`、`claude-sonnet-4-6`、`claude-sonnet-5`、`gemini-3.1-pro-preview`、`gemini-3.5-flash`、`grok-4.6`、`gpt-5.4-mini`、`gpt-5.4`、`gpt-5.5`、`gpt-5.6-luna`、`gpt-5.6-sol`、`gpt-5.6-terra`、`gpt-image-2`。
+
+农场花型按品牌而不是具体模型确定：同品牌模型共享完全一致的花头、茎叶和配色；模型 ID 仍独立保存在种植与审计记录中。四种品牌花分别使用 OpenAI 结形、Claude 橙色放射形、Gemini 蓝色星芒形和 Grok 黑色斜环形。
 
 同一个用户 API Key 可被授予一个或多个模型 ID。所有模型用量、种植成本、支付入账和 Token 包激活都结算到同一个钱包；模型 ID 继续保存在用量、Planting 和 Token 包中作为定价、花型和审计维度。钱包展示：
 

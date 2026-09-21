@@ -281,7 +281,7 @@
   left: 50%;
   width: 6px;
   height: 29px;
-  background: var(--crop-accent);
+  background: var(--flower-stem-color);
   transform: translateX(-50%);
 }
 .crop-preview-plant:nth-child(1) {
@@ -303,8 +303,8 @@
   position: absolute;
   width: 15px;
   height: 7px;
-  background: #54904b;
-  border: 2px solid #3f783f;
+  background: var(--flower-leaf-color);
+  border: 2px solid var(--flower-leaf-edge-color);
 }
 .crop-preview-leaf.left {
   top: 10px;
@@ -314,16 +314,15 @@
   top: 17px;
   left: 4px;
 }
-.crop-preview-flower {
+.crop-preview-plant-image {
   position: absolute;
-  top: -16px;
+  z-index: 1;
+  bottom: 0;
   left: 50%;
+  width: 62px;
+  height: 62px;
+  image-rendering: pixelated;
   transform: translateX(-50%);
-}
-.crop-preview-flower .model-mark {
-  width: 25px;
-  height: 25px;
-  border-color: var(--crop-color);
 }
 .crop-card-title {
   grid-column: 1 / -1;

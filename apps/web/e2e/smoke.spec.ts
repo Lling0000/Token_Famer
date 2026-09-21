@@ -159,7 +159,11 @@ test('uses branded model picker and supports profile and sidebar controls', asyn
   const picker = page.getByRole('button', { name: /调用 \/ 种植模型/ });
   await picker.click();
   await expect(page.getByRole('listbox', { name: '选择模型' })).toBeVisible();
-  await expect(page.getByText('Anthropic', { exact: true })).toBeVisible();
+  for (const brand of ['OpenAI', 'Claude', 'Gemini', 'Grok']) {
+    await expect(page.getByText(brand, { exact: true })).toBeVisible();
+  }
+  await expect(page.getByText('DeepSeek', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('智谱', { exact: true })).toHaveCount(0);
   await page.getByRole('option', { name: /Claude Sonnet 4.6/ }).click();
   await expect(picker).toContainText('Sonnet');
 
@@ -206,6 +210,10 @@ test('opens connected game panels and completes a sandbox purchase', async ({ pa
 
   await page.getByRole('button', { name: '商店' }).click();
   await expect(page.getByRole('heading', { name: 'Token 农场商店' })).toBeVisible();
+  await expect(page.locator('.crop-card')).toHaveCount(4);
+  for (const flower of ['ChatGPT 花', 'Claude 花', 'Gemini 花', 'Grok 花']) {
+    await expect(page.getByRole('button', { name: new RegExp(flower) })).toBeVisible();
+  }
   await page.getByRole('button', { name: '购买 Token' }).click();
   await expect(page.getByRole('heading', { name: '购买模型 Token' })).toBeVisible();
   await page.getByRole('button', { name: /庄园包/ }).click();

@@ -9,6 +9,18 @@ describe('farm engine', () => {
     expect(plots.filter((plot) => plot.unlocked)).toHaveLength(6);
   });
 
+  it('shows all four approved flower brands in the demo farm', () => {
+    const modelIds = new Set(createFarmPlots(0, true).map((plot) => plot.modelId));
+    for (const modelId of [
+      'gpt-5.4',
+      'claude-sonnet-4-6',
+      'gemini-3.1-pro-preview',
+      'grok-4.6',
+    ] as const) {
+      expect(modelIds.has(modelId)).toBe(true);
+    }
+  });
+
   it('plants using integer token amounts', () => {
     const crop = requireCrop('radish');
     const plot = createFarmPlots(0)[0];
@@ -53,7 +65,7 @@ describe('farm engine', () => {
       plot: createFarmPlots(0)[0],
       tool: 'seed',
       crop,
-      modelId: 'glm-5.2',
+      modelId: 'grok-4.6',
       nowMs: 0,
       walletBalance: 0n,
     });
@@ -61,7 +73,7 @@ describe('farm engine', () => {
       plot: planted.plot,
       tool: 'harvest',
       crop,
-      modelId: 'glm-5.2',
+      modelId: 'grok-4.6',
       nowMs: crop.durationMs,
       walletBalance: 0n,
     });

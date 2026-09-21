@@ -7,11 +7,9 @@ export type ModelId =
   | 'claude-opus-4-8'
   | 'claude-sonnet-4-6'
   | 'claude-sonnet-5'
-  | 'deepseek-v4-flash'
-  | 'deepseek-v4-pro'
   | 'gemini-3.1-pro-preview'
   | 'gemini-3.5-flash'
-  | 'glm-5.2'
+  | 'grok-4.6'
   | 'gpt-5.4-mini'
   | 'gpt-5.4'
   | 'gpt-5.5'
@@ -26,7 +24,7 @@ export type GamePanel =
   'shop' | 'warehouse' | 'leaderboard' | 'api' | 'tasks' | 'social' | 'payment' | null;
 export type PlotIssue = 'weed' | 'bug' | null;
 export type PlotPhase = 'empty' | 'seed' | 'sprout' | 'growing' | 'flowering' | 'mature';
-export type ModelBrand = 'openai' | 'anthropic' | 'deepseek' | 'google' | 'zhipu';
+export type ModelBrand = 'openai' | 'anthropic' | 'google' | 'grok';
 export type FarmDecoration = 'none' | 'lantern-line' | 'flower-flags';
 
 export interface ModelDefinition {

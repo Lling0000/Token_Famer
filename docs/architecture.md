@@ -21,6 +21,8 @@ flowchart LR
 
 API 是 HTTP 组合根，Worker 是异步组合根；它们负责装配 Adapter，不拥有业务规则。Web 只消费 Contracts，不导入服务端模块。
 
+公开模型目录由 `packages/contracts` 拥有稳定 ID，`gateway` 负责校验可用性和装配对应上游 Adapter，`farm` 只保存模型 ID 作为花型与审计维度。品牌花视觉由 Web 按品牌映射，不进入经济计算。
+
 ## 模块所有权
 
 | 模块          | 负责                                       | 拥有的数据                                                                 | 可发布的主要事件                             |

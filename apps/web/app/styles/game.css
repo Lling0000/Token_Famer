@@ -183,33 +183,19 @@
   height: 5px;
   background: currentColor;
 }
-.model-mark-deepseek i {
+.model-mark-grok i {
   width: 13px;
-  height: 8px;
+  height: 13px;
+  border: 3px solid currentColor;
+  border-radius: 50%;
+}
+.model-mark-grok i::after {
+  top: 5px;
+  left: -4px;
+  width: 20px;
+  height: 3px;
   background: currentColor;
-  box-shadow: 4px -3px 0 -1px currentColor;
-}
-.model-mark-deepseek i::before {
-  top: -4px;
-  left: -5px;
-  width: 7px;
-  height: 4px;
-  background: currentColor;
-  box-shadow: -2px -3px 0 -1px currentColor;
-}
-.model-mark-deepseek i::after {
-  top: 2px;
-  right: 2px;
-  width: 2px;
-  height: 2px;
-  background: var(--model-color);
-}
-.model-mark-zhipu i::before {
-  content: 'Z';
-  inset: -7px;
-  color: currentColor;
-  font-size: 17px;
-  line-height: 18px;
+  transform: rotate(-45deg);
 }
 .resource-strip {
   display: flex;
