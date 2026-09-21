@@ -15,6 +15,7 @@
     "skipLibCheck": true,
     "noEmit": true,
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
       "@token-farmer/primitives": ["packages/primitives/src/index.ts"],
       "@token-farmer/contracts": ["packages/contracts/src/index.ts"],
