@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { MODEL_IDS } from '@token-farmer/contracts';
+
 import { buildApp } from './app';
 import { createTotpCode } from './auth-crypto';
 import { loadConfig } from './config';
@@ -39,7 +41,7 @@ describe('Token Farmer HTTP contracts', () => {
     expect(response.statusCode).toBe(200);
     const body = response.json();
     expect(body.plots).toHaveLength(24);
-    expect(body.models).toHaveLength(20);
+    expect(body.models).toHaveLength(MODEL_IDS.length);
     expect(body.creditBalance).toMatch(/^\d+$/);
     expect(body.models.every((modelId: string) => typeof modelId === 'string')).toBe(true);
   });
