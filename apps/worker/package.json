@@ -10,7 +10,7 @@
     "start": "node dist/server.js"
   },
   "dependencies": {
-    "bullmq": "^5.58.0"
+    "bullmq": "^6.3.8"
   },
   "devDependencies": {
     "tsx": "^4.20.0",
