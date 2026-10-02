@@ -1,41 +1,28 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { MousePointer2, PaintBucket, Shovel, SprayCan, Sprout, Wheat } from 'lucide-react';
+import { FarmToolIcon, TOOL_PATHS } from './tool-icon';
+import { projection, plotCenter, hitTestPlot } from '@/lib/farm-layout';
+import type { Projection } from '@/lib/farm-layout';
 import { getCrop, getModel } from '@/lib/game-data';
 import { getPlotPhase, getPlotProgress } from '@/lib/game-engine';
-import type { FarmPlot, FarmTool } from '@/lib/game-types';
+import type { FarmPlot, FarmTool, PlotPhase } from '@/lib/game-types';
 import { getModelPlantVisual } from '../model/model-plant-visual';
 import { drawLock, drawModelPlantSprite } from './model-bloom';
+import type { PlantGrowthStage } from './model-bloom';
 
 interface FarmCanvasProps {
   plots: FarmPlot[];
   activeTool: FarmTool;
   selectedPlotId: number | null;
-  onPlotClick: (plotId: number | null) => void;
+  onPlotClick: (plotId: number | null) => FarmTool | void;
 }
-
-const TOOL_CURSOR_ICONS = {
-  inspect: MousePointer2,
-  seed: Sprout,
-  water: PaintBucket,
-  weed: Shovel,
-  bug: SprayCan,
-  harvest: Wheat,
-} as const;
 
 interface ViewState {
   width: number;
   height: number;
   hoverId: number | null;
-}
-
-interface Projection {
-  offsetX: number;
-  offsetY: number;
-  tileWidth: number;
-  tileHeight: number;
-  scale: number;
+  feedback?: { plotId: number; tool: FarmTool; startedAt: number };
 }
 
 const INITIAL_VIEW: ViewState = {
@@ -43,20 +30,6 @@ const INITIAL_VIEW: ViewState = {
   height: 1,
   hoverId: null,
 };
-
-const BACKGROUND_WIDTH = 1536;
-const BACKGROUND_HEIGHT = 1024;
-const BACKGROUND_PLOT_ORIGIN = { x: 834, y: 245 };
-const BACKGROUND_GRID_STEP = { x: 119, y: 60 };
-const PLOT_HALF_SIZE = { x: 116, y: 58 };
-const BACKGROUND_PLOT_CENTERS = Array.from({ length: 25 }, (_, index) => {
-  const row = Math.floor(index / 5);
-  const column = index % 5;
-  return {
-    x: BACKGROUND_PLOT_ORIGIN.x + (column - row) * BACKGROUND_GRID_STEP.x,
-    y: BACKGROUND_PLOT_ORIGIN.y + (column + row) * BACKGROUND_GRID_STEP.y,
-  };
-}).filter((_, index) => index !== 12);
 
 // eslint-disable-next-line max-lines-per-function -- Canvas lifecycle keeps pointer input, sizing, and the animation frame synchronized in one effect.
 export function FarmCanvas({ plots, activeTool, selectedPlotId, onPlotClick }: FarmCanvasProps) {
@@ -117,15 +90,19 @@ export function FarmCanvas({ plots, activeTool, selectedPlotId, onPlotClick }: F
       }
       if (hit !== view.hoverId) {
         view.hoverId = hit;
-        canvas.style.cursor =
-          activeToolRef.current === 'inspect' && hit !== null ? 'pointer' : 'default';
       }
+      canvas.style.cursor =
+        hit === null ? 'default' : activeToolRef.current === 'inspect' ? 'pointer' : 'none';
     };
     const handleClick = (event: PointerEvent) => {
       const point = pointerPosition(event);
       const view = viewRef.current;
       const hit = hitTestPlot(point.x, point.y, view, plotsRef.current);
-      onPlotClickRef.current(hit);
+      const tool = onPlotClickRef.current(hit);
+      if (tool && hit !== null) {
+        view.feedback = { plotId: hit, tool, startedAt: performance.now() };
+        canvas.dataset.lastAction = tool;
+      }
     };
     const handlePointerLeave = () => {
       viewRef.current.hoverId = null;
@@ -145,7 +122,10 @@ export function FarmCanvas({ plots, activeTool, selectedPlotId, onPlotClick }: F
     };
   }, []);
 
-  const CursorIcon = TOOL_CURSOR_ICONS[activeTool];
+  useEffect(() => {
+    if (cursorRef.current) cursorRef.current.style.display = 'none';
+    if (canvasRef.current) canvasRef.current.style.cursor = 'default';
+  }, [activeTool]);
   return (
     <>
       <canvas
@@ -154,47 +134,15 @@ export function FarmCanvas({ plots, activeTool, selectedPlotId, onPlotClick }: F
         aria-label="24格等距 Token 农场"
         data-active-tool={activeTool}
         data-land-layout="ground-anchored"
-        data-plot-footprint="116x58"
+        data-plot-footprint="104x52"
         data-selection-style="edge-glow"
         draggable={false}
       />
       <span ref={cursorRef} className="farm-tool-cursor" data-tool={activeTool} aria-hidden="true">
-        <CursorIcon size={22} strokeWidth={2.4} />
+        <FarmToolIcon tool={activeTool} size={24} />
       </span>
     </>
   );
-}
-
-function projection(view: ViewState): Projection {
-  const scale = Math.max(view.width / BACKGROUND_WIDTH, view.height / BACKGROUND_HEIGHT);
-  return {
-    offsetX: (view.width - BACKGROUND_WIDTH * scale) / 2,
-    offsetY: (view.height - BACKGROUND_HEIGHT * scale) / 2,
-    tileWidth: PLOT_HALF_SIZE.x * 2 * scale,
-    tileHeight: PLOT_HALF_SIZE.y * 2 * scale,
-    scale,
-  };
-}
-
-function plotCenter(plot: FarmPlot, project: Projection) {
-  const slot = BACKGROUND_PLOT_CENTERS[plot.id - 1] ?? BACKGROUND_PLOT_CENTERS[0];
-  return {
-    x: project.offsetX + slot.x * project.scale,
-    y: project.offsetY + slot.y * project.scale,
-  };
-}
-
-function hitTestPlot(x: number, y: number, view: ViewState, plots: FarmPlot[]): number | null {
-  const project = projection(view);
-  for (let index = plots.length - 1; index >= 0; index -= 1) {
-    const plot = plots[index];
-    const center = plotCenter(plot, project);
-    const normalized =
-      Math.abs(x - center.x) / (project.tileWidth / 2) +
-      Math.abs(y - center.y) / (project.tileHeight / 2);
-    if (normalized <= 1) return plot.id;
-  }
-  return null;
 }
 
 function drawFarm(
@@ -206,10 +154,51 @@ function drawFarm(
 ) {
   context.clearRect(0, 0, view.width, view.height);
   const project = projection(view);
+  drawEntranceMarker(context, project);
   const ordered = [...plots].sort(
-    (left, right) => left.row + left.column - right.row - right.column,
+    (left, right) => plotCenter(left, project).y - plotCenter(right, project).y,
   );
   for (const plot of ordered) drawPlot(context, plot, project, selectedPlotId, view.hoverId, time);
+  drawToolFeedback(context, view, project, time);
+}
+
+function drawToolFeedback(
+  context: CanvasRenderingContext2D,
+  view: ViewState,
+  project: Projection,
+  time: number,
+) {
+  const feedback = view.feedback;
+  if (!feedback) return;
+  const elapsed = time - feedback.startedAt;
+  if (elapsed > 850) return;
+  const point = plotCenter({ id: feedback.plotId }, project);
+  context.save();
+  context.globalAlpha = Math.max(0, 1 - elapsed / 850);
+  context.translate(point.x - 15, point.y - 28 - elapsed / 35);
+  context.fillStyle = '#18382a';
+  context.fillRect(-4, -4, 38, 38);
+  context.scale(1.25, 1.25);
+  context.fillStyle = feedback.tool === 'water' ? '#8fd8ed' : '#f4d477';
+  for (const path of TOOL_PATHS[feedback.tool]) context.fill(new Path2D(path));
+  context.restore();
+}
+
+function drawEntranceMarker(context: CanvasRenderingContext2D, project: Projection) {
+  const x = project.offsetX + 834 * project.scale;
+  const y = project.offsetY + 752 * project.scale;
+  const scale = project.scale;
+  context.fillStyle = '#553d29';
+  context.fillRect(x - 3 * scale, y - 20 * scale, 6 * scale, 28 * scale);
+  context.fillStyle = '#e2c07a';
+  context.fillRect(x - 39 * scale, y - 35 * scale, 78 * scale, 25 * scale);
+  context.strokeStyle = '#695034';
+  context.lineWidth = 2 * scale;
+  context.strokeRect(x - 39 * scale, y - 35 * scale, 78 * scale, 25 * scale);
+  context.font = `bold ${11 * scale}px "Microsoft YaHei", sans-serif`;
+  context.textAlign = 'center';
+  context.fillStyle = '#3a3927';
+  context.fillText('农场入口', x, y - 18 * scale);
 }
 
 // eslint-disable-next-line max-params -- Canvas drawing keeps scalar hot-path coordinates allocation-free.
@@ -348,6 +337,7 @@ function drawCrop(
   const plantVisual = getModelPlantVisual(model);
   const nowMs = new Date().getTime();
   const phase = getPlotPhase(plot, nowMs);
+  const sprite = plantGrowthSprite(phase, scale);
   const phaseSize = {
     seed: 0.16,
     sprout: 0.34,
@@ -362,13 +352,16 @@ function drawCrop(
     const baseX = x + offsetX * scale;
     const baseY = y + offsetY * scale;
     const height = 28 * phaseSize * scale;
-    if (phaseSize > 0.7) {
+    if (
+      phaseSize > 0.25 &&
       drawModelPlantSprite(context, {
         x: baseX + sway,
-        baseY: baseY + 11 * scale,
-        height: (phase === 'mature' ? 94 : 78) * scale,
+        baseY,
+        height: sprite.height,
         brand: model.brand,
-      });
+        stage: sprite.stage,
+      })
+    ) {
       continue;
     }
     context.fillStyle = plantVisual.stemColor;
@@ -384,6 +377,16 @@ function drawCrop(
   }
   if (phase !== 'mature')
     drawProgressBar(context, x, y + 29 * scale, 52 * scale, getPlotProgress(plot, nowMs));
+}
+
+function plantGrowthSprite(
+  phase: PlotPhase,
+  scale: number,
+): { height: number; stage: PlantGrowthStage } {
+  const height =
+    { empty: 0, seed: 8, sprout: 25, growing: 44, flowering: 72, mature: 92 }[phase] * scale;
+  const stage = phase === 'mature' ? 'mature' : phase === 'flowering' ? 'flowering' : 'seedling';
+  return { height, stage };
 }
 
 function drawProgressBar(

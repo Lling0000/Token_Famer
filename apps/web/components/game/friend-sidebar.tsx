@@ -159,6 +159,7 @@ export function FriendSidebar({
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="搜索好友"
+          aria-label="搜索好友"
         />
       </label>
       <div className="friend-alerts">
@@ -175,6 +176,16 @@ export function FriendSidebar({
         </button>
       </div>
       <div className="friend-list" role="list">
+        {!visibleFriends.length && (
+          <div className="friend-search-empty" role="status">
+            <Search size={24} />
+            <strong>没有找到这位好友</strong>
+            <span>试试昵称中的其他文字</span>
+            <button type="button" onClick={() => setQuery('')}>
+              清空搜索
+            </button>
+          </div>
+        )}
         {visibleFriends.map((friend) => (
           <div
             className={visiting?.name === friend.name ? 'friend-row visiting' : 'friend-row'}

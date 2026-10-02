@@ -2,8 +2,10 @@
 
 import { ArrowRight, Gift, ShieldCheck, Sparkles, Sprout } from 'lucide-react';
 import { useState } from 'react';
-import { FEATURED_MODELS } from '@/lib/game-data';
+import { FEATURED_MODELS, MODELS } from '@/lib/game-data';
 import type { ModelId } from '@/lib/game-types';
+import { FarmLoop } from '../game/farm-loop';
+import { ModelMark } from '../model/model-mark';
 
 interface OnboardingScreenProps {
   onComplete: (nickname: string, modelId: ModelId) => void;
@@ -22,6 +24,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
         <span className="eyebrow">WELCOME GRANT</span>
         <h1>你的第一袋 Token 种子</h1>
         <p>首次验证登录获得 80K 统一 Token Credit，可用于所有已授权模型调用和农场种植。</p>
+        <FarmLoop />
       </section>
       <WelcomeGrant />
       <FarmSetup
@@ -43,6 +46,10 @@ function WelcomeGrant() {
         <span>首次赠送</span>
       </div>
       <div className="grant-models">
+        <div className="grant-credit">
+          <b>80,000</b>
+          <span>统一 Token Credit · 首次登录赠送</span>
+        </div>
         {FEATURED_MODELS.map((model) => (
           <div className="grant-item" key={model.id}>
             <i style={{ backgroundColor: model.color }} />
@@ -53,7 +60,7 @@ function WelcomeGrant() {
       </div>
       <div className="grant-note">
         <ShieldCheck size={15} />
-        80K 共享余额 · 20 个模型 · 仅可领取一次
+        一份余额 · {MODELS.length} 个模型 · 仅可领取一次
       </div>
     </section>
   );
@@ -90,9 +97,10 @@ function FarmSetup(props: FarmSetupProps) {
             }
             type="button"
             key={model.id}
+            aria-pressed={model.id === props.modelId}
             onClick={() => props.onModelChange(model.id)}
           >
-            <i style={{ backgroundColor: model.color }} />
+            <ModelMark brand={model.brand} color={model.color} />
             <span>{model.shortLabel}</span>
           </button>
         ))}

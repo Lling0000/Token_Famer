@@ -10,9 +10,13 @@ interface ToneOptions {
 }
 
 const FARM_MELODIES = [
-  [659.25, 783.99, 880, 783.99, 659.25, 587.33, 659.25, 523.25],
-  [587.33, 659.25, 783.99, 880, 783.99, 659.25, 587.33, 523.25],
+  [329.63, 392, 440, 392, 329.63, 293.66, 261.63, 293.66],
+  [329.63, 392, 523.25, 440, 392, 329.63, 293.66, 261.63],
+  [261.63, 329.63, 440, 392, 349.23, 329.63, 293.66, 329.63],
+  [349.23, 440, 392, 329.63, 293.66, 261.63, 293.66, 261.63],
 ];
+const MUSIC_STEP_SECONDS = 0.375;
+const MUSIC_BAR_SECONDS = MUSIC_STEP_SECONDS * 16;
 const FARM_BASS = [130.81, 98, 110, 87.31];
 const FARM_CHORDS = [
   [261.63, 329.63, 392],
@@ -29,10 +33,12 @@ export class FarmAudioEngine {
   private musicTimer: number | null = null;
   private musicBar = 0;
   private muted = false;
+  private musicMuted = true;
+  private nextMusicBarAt = 0;
 
   constructor() {
     this.master.gain.value = 0.72;
-    this.music.gain.value = 0.13;
+    this.music.gain.value = 0;
     this.effects.gain.value = 0.16;
     this.music.connect(this.master);
     this.effects.connect(this.master);
@@ -42,8 +48,12 @@ export class FarmAudioEngine {
   async resumeAndStart(): Promise<void> {
     if (this.context.state === 'suspended') await this.context.resume();
     if (this.musicTimer !== null) return;
+    this.nextMusicBarAt = this.context.currentTime + 0.08;
     this.scheduleMusicBar();
-    this.musicTimer = window.setInterval(() => this.scheduleMusicBar(), 7_680);
+    this.musicTimer = window.setInterval(() => {
+      if (this.nextMusicBarAt > this.context.currentTime + 0.3) return;
+      this.scheduleMusicBar();
+    }, 150);
   }
 
   setMuted(muted: boolean): void {
@@ -53,6 +63,12 @@ export class FarmAudioEngine {
 
   isMuted(): boolean {
     return this.muted;
+  }
+
+  setMusicMuted(muted: boolean): void {
+    this.musicMuted = muted;
+    this.music.gain.setTargetAtTime(muted ? 0 : 0.1, this.context.currentTime, 0.08);
+    if (!muted) this.nextMusicBarAt = this.context.currentTime + 0.05;
   }
 
   playClick(): void {
@@ -106,14 +122,14 @@ export class FarmAudioEngine {
   }
 
   private scheduleMusicBar(): void {
-    if (this.muted) return;
-    const start = this.context.currentTime + 0.08;
-    const step = 0.48;
+    const start = Math.max(this.nextMusicBarAt, this.context.currentTime + 0.05);
+    this.nextMusicBarAt = start + MUSIC_BAR_SECONDS;
+    if (this.muted || this.musicMuted) return;
+    const step = MUSIC_STEP_SECONDS;
     const melody = FARM_MELODIES[this.musicBar % FARM_MELODIES.length]!;
     this.scheduleMelody(melody, start, step);
     this.scheduleHarmony(start, step);
     this.scheduleBeat(start, step);
-    this.scheduleBirdChirp(start + step * (this.musicBar % 2 === 0 ? 6 : 13));
     this.musicBar += 1;
   }
 
@@ -122,9 +138,9 @@ export class FarmAudioEngine {
       this.tone({
         frequency,
         start: start + index * step * 2,
-        duration: 0.32,
-        volume: index % 4 === 0 ? 0.2 : 0.14,
-        type: 'triangle',
+        duration: 0.55,
+        volume: index % 4 === 0 ? 0.16 : 0.11,
+        type: 'sine',
         output: this.music,
       });
     });
@@ -135,9 +151,9 @@ export class FarmAudioEngine {
       this.tone({
         frequency: FARM_BASS[chordIndex]!,
         start: start + chordIndex * step * 4,
-        duration: 0.7,
+        duration: 1.2,
         volume: 0.08,
-        type: 'square',
+        type: 'sine',
         output: this.music,
       });
       chord.forEach((frequency, noteIndex) =>
@@ -163,25 +179,6 @@ export class FarmAudioEngine {
         type: 'sine',
         output: this.music,
       });
-    });
-  }
-
-  private scheduleBirdChirp(start: number): void {
-    this.tone({
-      frequency: 1_320,
-      start,
-      duration: 0.08,
-      volume: 0.045,
-      type: 'sine',
-      output: this.music,
-    });
-    this.tone({
-      frequency: 1_680,
-      start: start + 0.09,
-      duration: 0.07,
-      volume: 0.035,
-      type: 'sine',
-      output: this.music,
     });
   }
 

@@ -1,12 +1,8 @@
 import type { ModelBrand } from '@/lib/game-types';
+import atlas from '../../lib/model-flower-atlas.json';
 
-const SPRITE_SHEET_PATH = '/assets/model-flower-sprites.png';
-const BRAND_COLUMN: Record<ModelBrand, number> = {
-  openai: 0,
-  anthropic: 1,
-  google: 2,
-  grok: 3,
-};
+const SPRITE_SHEET_PATH = '/assets/model-flowers-v2.png';
+export type PlantGrowthStage = 'seedling' | 'flowering' | 'mature';
 
 let spriteSheet: HTMLImageElement | null = null;
 let spriteSheetPromise: Promise<HTMLImageElement> | null = null;
@@ -16,6 +12,7 @@ interface PlantSpriteGeometry {
   baseY: number;
   height: number;
   brand: ModelBrand;
+  stage?: PlantGrowthStage;
 }
 
 export function loadModelPlantSprites(): Promise<HTMLImageElement> {
@@ -45,18 +42,16 @@ export function drawModelPlantSprite(
     void loadModelPlantSprites().catch(() => undefined);
     return false;
   }
-  const sourceWidth = image.naturalWidth / 4;
-  const sourceY = image.naturalHeight * 0.02;
-  const sourceHeight = image.naturalHeight * 0.84;
-  const width = plant.height * (sourceWidth / sourceHeight);
+  const frame = atlas.frames[plant.brand][plant.stage ?? 'mature'];
+  const width = plant.height * (frame.width / frame.height);
   context.drawImage(
     image,
-    BRAND_COLUMN[plant.brand] * sourceWidth,
-    sourceY,
-    sourceWidth,
-    sourceHeight,
-    plant.x - width / 2,
-    plant.baseY - plant.height,
+    frame.x,
+    frame.y,
+    frame.width,
+    frame.height,
+    plant.x - (frame.anchorX / frame.width) * width,
+    plant.baseY - (frame.anchorY / frame.height) * plant.height,
     width,
     plant.height,
   );

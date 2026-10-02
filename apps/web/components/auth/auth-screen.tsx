@@ -3,6 +3,7 @@
 import { ArrowRight, Copy, KeyRound, Mail, ShieldCheck, Sprout, UserRound } from 'lucide-react';
 import type { AuthenticatedAccount, AuthDraft, AuthMode } from '@/lib/use-auth-flow';
 import { useAuthFlow } from '@/lib/use-auth-flow';
+import { FarmLoop } from '../game/farm-loop';
 
 interface AuthScreenProps {
   onAuthenticated: (account: AuthenticatedAccount) => void;
@@ -53,12 +54,13 @@ export function AuthScreen({ onAuthenticated, onDemo }: AuthScreenProps) {
         <p>种下一次调用，等待花开。使用统一 Token Credit 经营农场与模型调用。</p>
         <div className="auth-status-row">
           <span>
-            <i className="status-dot" /> Mock 上游在线
+            <i className="status-dot" /> 像素农场 · 模型花
           </span>
           <span>
             <ShieldCheck size={15} /> 邀请制测试
           </span>
         </div>
+        <FarmLoop />
       </section>
       <AuthPanel flow={flow} onDemo={onDemo} />
       <footer className="auth-footer">测试 Token 不可提现、交易或转账</footer>

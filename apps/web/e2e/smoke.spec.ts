@@ -9,7 +9,7 @@ test('opens a playable desktop farm from demo mode', async ({ page }) => {
   await expect(page.getByRole('button', { name: '一键收获' })).toBeVisible();
   const canvas = page.getByLabel('24格等距 Token 农场');
   await expect(canvas).toHaveAttribute('data-land-layout', 'ground-anchored');
-  await expect(canvas).toHaveAttribute('data-plot-footprint', '116x58');
+  await expect(canvas).toHaveAttribute('data-plot-footprint', '104x52');
   await expect(canvas).toHaveAttribute('data-selection-style', 'edge-glow');
   await expect(canvas).toHaveAttribute('draggable', 'false');
   await expect(page.locator('.plot-inspector')).toHaveCount(0);
@@ -21,11 +21,13 @@ test('opens a playable desktop farm from demo mode', async ({ page }) => {
   await expect(page.locator('.farm-dog-route')).toHaveCount(0);
   await expect(page.locator('.stream-glint')).toHaveCount(0);
   await expect(
-    page.getByRole('button', { name: '浇水' }).locator('.lucide-paint-bucket'),
+    page.getByRole('button', { name: '浇水', exact: true }).locator('[data-tool-icon="water"]'),
   ).toBeVisible();
-  await expect(page.getByRole('button', { name: '除草' }).locator('.lucide-shovel')).toBeVisible();
   await expect(
-    page.getByRole('button', { name: '除虫' }).locator('.lucide-spray-can'),
+    page.getByRole('button', { name: '除草', exact: true }).locator('[data-tool-icon="weed"]'),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: '除虫', exact: true }).locator('[data-tool-icon="bug"]'),
   ).toBeVisible();
   await page.getByRole('button', { name: '静音农场声音' }).click();
   await expect(page.getByRole('button', { name: '开启农场声音' })).toBeVisible();
@@ -106,7 +108,7 @@ test('shows a tool cursor on land and plot details only after a plot click', asy
   const center = {
     x: (box!.width - 1536 * scale) / 2 + 834 * scale,
     // Use the second row so the transient demo-loaded notice cannot intercept pointer events.
-    y: (box!.height - 1024 * scale) / 2 + 365 * scale,
+    y: (box!.height - 1024 * scale) / 2 + 374 * scale,
   };
 
   await page.getByRole('button', { name: '浇水' }).click();
@@ -124,7 +126,7 @@ test('shows a tool cursor on land and plot details only after a plot click', asy
       if (!context) return 0;
       const ratio = element.width / element.getBoundingClientRect().width;
       const vertexX = Math.round(geometry.center.x * ratio);
-      const vertexY = Math.round((geometry.center.y - 58 * geometry.scale) * ratio);
+      const vertexY = Math.round((geometry.center.y - 52 * geometry.scale) * ratio);
       const pixels = context.getImageData(vertexX - 4, vertexY - 4, 9, 9).data;
       let highlighted = 0;
       for (let index = 0; index < pixels.length; index += 4) {
@@ -217,6 +219,7 @@ test('opens connected game panels and completes a sandbox purchase', async ({ pa
   }
   await page.getByRole('button', { name: '购买 Token' }).click();
   await expect(page.getByRole('heading', { name: '购买模型 Token' })).toBeVisible();
+  await expect(page.getByRole('dialog')).toContainText('统一 Token Credit 余额');
   await page.getByRole('button', { name: /庄园包/ }).click();
   await page.getByRole('button', { name: '模拟支付并入账' }).click();
   await expect(page.getByRole('button', { name: '沙箱入账完成' })).toBeDisabled();
@@ -236,7 +239,7 @@ test('opens connected game panels and completes a sandbox purchase', async ({ pa
 test('shows Token packages as a compact branded warehouse grid', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: '进入演示农场' }).click();
-  await page.getByRole('button', { name: '仓库' }).click();
+  await page.getByRole('button', { name: '仓库', exact: true }).click();
   await expect(page.locator('.package-grid')).toBeVisible();
   await expect(page.locator('.package-card')).toHaveCount(2);
   await expect(page.locator('.package-card .model-mark')).toHaveCount(2);
@@ -264,7 +267,7 @@ test('captures the unified desktop interaction surfaces', async ({ page }, testI
   await page.goto('/');
   await page.getByRole('button', { name: '进入演示农场' }).click();
   const capturePanel = async (navName: string, fileName: string) => {
-    await page.getByRole('button', { name: navName }).click();
+    await page.getByRole('button', { name: navName, exact: true }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(fileName) });
     await page.getByRole('button', { name: '关闭' }).click();
@@ -330,6 +333,10 @@ for (const viewport of [
       () => document.documentElement.scrollWidth - window.innerWidth,
     );
     expect(horizontalOverflow).toBeLessThanOrEqual(0);
+    const stage = await page.locator('.farm-stage').boundingBox();
+    expect(stage!.y + stage!.height).toBeLessThanOrEqual(viewport.height);
+    const dock = await page.locator('.tool-dock').boundingBox();
+    expect(dock!.y + dock!.height).toBeLessThanOrEqual(viewport.height);
     await page.screenshot({
       path: testInfo.outputPath(`farm-${viewport.width}x${viewport.height}.png`),
       fullPage: true,

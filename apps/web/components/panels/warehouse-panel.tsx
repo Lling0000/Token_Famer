@@ -27,7 +27,7 @@ export function WarehousePanel({
       wide
       eyebrow="TOKEN STORAGE"
       title="Token 仓库"
-      description="收获和偷取所得先进入仓库，激活后才会进入对应模型钱包。"
+      description="收获和偷取所得先进入仓库，激活后加入统一 Token Credit 余额，可用于播种和模型调用。"
       onClose={onClose}
       actions={
         <button

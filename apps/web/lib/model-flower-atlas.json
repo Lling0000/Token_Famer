@@ -1,0 +1,110 @@
+{
+  "width": 1536,
+  "height": 1024,
+  "frames": {
+    "openai": {
+      "seedling": {
+        "x": 103,
+        "y": 124,
+        "width": 200,
+        "height": 178,
+        "anchorX": 92,
+        "anchorY": 171
+      },
+      "flowering": {
+        "x": 72,
+        "y": 366,
+        "width": 269,
+        "height": 257,
+        "anchorX": 123,
+        "anchorY": 247
+      },
+      "mature": {
+        "x": 47,
+        "y": 640,
+        "width": 320,
+        "height": 323,
+        "anchorX": 148,
+        "anchorY": 311
+      }
+    },
+    "anthropic": {
+      "seedling": {
+        "x": 483,
+        "y": 107,
+        "width": 213,
+        "height": 195,
+        "anchorX": 107,
+        "anchorY": 188
+      },
+      "flowering": {
+        "x": 450,
+        "y": 339,
+        "width": 289,
+        "height": 285,
+        "anchorX": 140,
+        "anchorY": 275
+      },
+      "mature": {
+        "x": 424,
+        "y": 631,
+        "width": 350,
+        "height": 339,
+        "anchorX": 166,
+        "anchorY": 321
+      }
+    },
+    "google": {
+      "seedling": {
+        "x": 860,
+        "y": 107,
+        "width": 199,
+        "height": 195,
+        "anchorX": 98,
+        "anchorY": 188
+      },
+      "flowering": {
+        "x": 821,
+        "y": 339,
+        "width": 278,
+        "height": 285,
+        "anchorX": 137,
+        "anchorY": 277
+      },
+      "mature": {
+        "x": 812,
+        "y": 631,
+        "width": 330,
+        "height": 336,
+        "anchorX": 146,
+        "anchorY": 324
+      }
+    },
+    "grok": {
+      "seedling": {
+        "x": 1245,
+        "y": 108,
+        "width": 201,
+        "height": 194,
+        "anchorX": 102,
+        "anchorY": 187
+      },
+      "flowering": {
+        "x": 1205,
+        "y": 349,
+        "width": 270,
+        "height": 272,
+        "anchorX": 142,
+        "anchorY": 264
+      },
+      "mature": {
+        "x": 1185,
+        "y": 637,
+        "width": 327,
+        "height": 333,
+        "anchorX": 162,
+        "anchorY": 319
+      }
+    }
+  }
+}

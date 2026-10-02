@@ -100,9 +100,7 @@ export function PanelHost(props: PanelHostProps) {
     );
   }
   if (props.panel === 'payment') {
-    return (
-      <PaymentPanel modelId={props.modelId} onPurchase={props.onPurchase} onClose={props.onClose} />
-    );
+    return <PaymentPanel onPurchase={props.onPurchase} onClose={props.onClose} />;
   }
   return null;
 }

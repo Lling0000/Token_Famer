@@ -3,6 +3,7 @@
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 
 interface PanelShellProps {
   eyebrow: string;
@@ -24,6 +25,7 @@ export function PanelShell({
   onClose,
   wide = false,
 }: PanelShellProps) {
+  const dialogRef = useDialogFocus();
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
@@ -39,6 +41,8 @@ export function PanelShell({
       onMouseDown={(event) => event.currentTarget === event.target && onClose()}
     >
       <section
+        ref={dialogRef}
+        tabIndex={-1}
         className={wide ? 'game-panel wide' : 'game-panel'}
         role="dialog"
         aria-modal="true"

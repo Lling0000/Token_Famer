@@ -7,8 +7,15 @@ import { FarmAudioEngine } from './farm-audio-engine';
 export function useGameAudio(active: boolean) {
   const engineRef = useRef<FarmAudioEngine | null>(null);
   const [muted, setMuted] = useState(false);
+  const [musicMuted, setMusicMuted] = useState(true);
+  const preferences = useRef({ muted, musicMuted });
+  preferences.current = { muted, musicMuted };
   const ensureEngine = useCallback(() => {
-    engineRef.current ??= new FarmAudioEngine();
+    if (!engineRef.current) {
+      engineRef.current = new FarmAudioEngine();
+      engineRef.current.setMuted(preferences.current.muted);
+      engineRef.current.setMusicMuted(preferences.current.musicMuted);
+    }
     void engineRef.current.resumeAndStart();
     return engineRef.current;
   }, []);
@@ -21,12 +28,12 @@ export function useGameAudio(active: boolean) {
       if (target?.closest('button, [role="button"]')) engine.playClick();
     };
     document.addEventListener('pointerdown', playButtonClick, true);
-    return () => document.removeEventListener('pointerdown', playButtonClick, true);
+    return () => {
+      document.removeEventListener('pointerdown', playButtonClick, true);
+      engineRef.current?.destroy();
+      engineRef.current = null;
+    };
   }, [active, ensureEngine]);
-
-  useEffect(() => {
-    return () => engineRef.current?.destroy();
-  }, []);
 
   const toggleMuted = useCallback(() => {
     const engine = ensureEngine();
@@ -40,6 +47,11 @@ export function useGameAudio(active: boolean) {
     [ensureEngine],
   );
   const playDogBark = useCallback(() => ensureEngine().playDogBark(), [ensureEngine]);
+  const toggleMusic = () => {
+    const nextMuted = !musicMuted;
+    ensureEngine().setMusicMuted(nextMuted);
+    setMusicMuted(nextMuted);
+  };
 
-  return { muted, toggleMuted, playFarmEffect, playDogBark };
+  return { muted, toggleMuted, musicMuted, toggleMusic, playFarmEffect, playDogBark };
 }

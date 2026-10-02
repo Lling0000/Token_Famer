@@ -6,6 +6,7 @@ import { OnboardingScreen } from './auth/onboarding-screen';
 import { DesktopRequired } from './desktop-required';
 import { FarmCanvas } from './farm/farm-canvas';
 import { FarmHud } from './game/farm-hud';
+import { FarmGuide } from './game/farm-guide';
 import { FarmDecoration } from './game/farm-decoration';
 import { FarmTravelOverlay } from './game/farm-travel-overlay';
 import { FriendSidebar } from './game/friend-sidebar';
@@ -18,6 +19,9 @@ import { CROPS, DEMO_BALANCE, WELCOME_BALANCE, getCrop } from '@/lib/game-data';
 import { formatStealAmount, sampleBasisPoints, stealAmount } from '@/lib/demo-steal';
 import { currentUtcMs } from '@/lib/browser-clock';
 import { applyFarmAction, createFarmPlots, getPlotPhase } from '@/lib/game-engine';
+import { getFarmOverview } from '@/lib/farm-overview';
+import { createDemoPackages } from '@/lib/demo-packages';
+import { harvestSandboxPlots } from '@/lib/harvest-sandbox-plots';
 import { useGameAudio } from '@/lib/use-game-audio';
 import { useGameShop } from '@/lib/use-game-shop';
 import { useAuthTransition } from '@/lib/use-auth-transition';
@@ -53,7 +57,9 @@ export function TokenFarmerApp() {
   const [packages, setPackages] = useState<TokenPackage[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(currentUtcMs);
-  const { muted, toggleMuted, playFarmEffect, playDogBark } = useGameAudio(screen === 'game');
+  const { muted, toggleMuted, musicMuted, toggleMusic, playFarmEffect, playDogBark } = useGameAudio(
+    screen === 'game',
+  );
   const shop = useGameShop({ balance, setBalance, setToast, playDogBark, nowMs });
   const enterAuthenticated = useAuthTransition(setNickname, setScreen);
 
@@ -88,30 +94,14 @@ export function TokenFarmerApp() {
 
   const visiblePlots = visitingFriend ? friendPlots : plots;
   const selectedPlot = visiblePlots.find((plot) => plot.id === selectedPlotId) ?? null;
+  const overview = getFarmOverview(visiblePlots, nowMs);
   const enterDemo = () => {
     const currentTime = currentUtcMs();
     setNickname('演示农场主');
     setLevel(15);
     setBalance(DEMO_BALANCE);
     setPlots(createFarmPlots(currentTime, true));
-    setPackages([
-      {
-        id: 'demo-1',
-        cropName: 'ChatGPT 花',
-        modelId: 'gpt-5.4',
-        amount: 2_880_000n,
-        createdAt: '今天 13:42',
-        source: 'harvest',
-      },
-      {
-        id: 'demo-2',
-        cropName: 'Claude 花',
-        modelId: 'claude-sonnet-4-6',
-        amount: 1_005_000n,
-        createdAt: '今天 12:18',
-        source: 'steal',
-      },
-    ]);
+    setPackages(createDemoPackages());
     setScreen('game');
     setToast('演示农场已载入');
   };
@@ -125,7 +115,7 @@ export function TokenFarmerApp() {
     setToast('统一 Token Credit 余额获得 80K 首次赠送');
   };
 
-  const handlePlotClick = (plotId: number | null) => {
+  const handlePlotClick = (plotId: number | null, tool: FarmTool = activeTool) => {
     setSelectedPlotId(plotId);
     if (plotId === null) return;
     if (visitingFriend) {
@@ -133,12 +123,12 @@ export function TokenFarmerApp() {
       return;
     }
     const original = plots.find((plot) => plot.id === plotId);
-    if (!original || activeTool === 'inspect') return;
+    if (!original || tool === 'inspect') return;
     const actionCrop = getCrop(original.cropId) ?? selectedCrop;
     const actionModel = original.modelId ?? modelId;
     const result = applyFarmAction({
       plot: original,
-      tool: activeTool,
+      tool,
       crop: actionCrop,
       modelId: actionModel,
       nowMs: currentUtcMs(),
@@ -146,11 +136,9 @@ export function TokenFarmerApp() {
     });
     setToast(result.message);
     if (!result.changed) return;
-    playFarmEffect(activeTool);
+    playFarmEffect(tool);
     setPlots((items) => items.map((plot) => (plot.id === plotId ? result.plot : plot)));
-    if (result.balanceDelta !== 0n) {
-      setBalance((current) => current + result.balanceDelta);
-    }
+    setBalance((current) => current + result.balanceDelta);
     if (result.packageAmount > 0n) {
       const tokenPackage: TokenPackage = {
         id: `${plotId}-${currentUtcMs()}`,
@@ -162,6 +150,7 @@ export function TokenFarmerApp() {
       };
       setPackages((items) => [tokenPackage, ...items]);
     }
+    return tool;
   };
 
   const handleFriendPlotClick = (plotId: number, friend: FriendSummary) => {
@@ -227,31 +216,11 @@ export function TokenFarmerApp() {
   };
 
   const batchHarvest = () => {
-    const currentTime = currentUtcMs();
-    const harvested: TokenPackage[] = [];
-    const nextPlots = plots.map((plot) => {
-      if (getPlotPhase(plot, currentTime) !== 'mature') return plot;
-      const crop = getCrop(plot.cropId);
-      if (!crop) return plot;
-      const packageModel = plot.modelId ?? modelId;
-      const result = applyFarmAction({
-        plot,
-        tool: 'harvest',
-        crop,
-        modelId: packageModel,
-        nowMs: currentTime,
-        walletBalance: balance,
-      });
-      if (result.packageAmount > 0n)
-        harvested.push({
-          id: `${plot.id}-${currentTime}`,
-          cropName: crop.name,
-          modelId: packageModel,
-          amount: result.packageAmount,
-          createdAt: '刚刚',
-          source: 'harvest',
-        });
-      return result.plot;
+    const { plots: nextPlots, packages: harvested } = harvestSandboxPlots({
+      plots,
+      nowMs: currentUtcMs(),
+      modelId,
+      balance,
     });
     if (!harvested.length) return setToast('当前没有可收获的作物');
     setPlots(nextPlots);
@@ -295,11 +264,15 @@ export function TokenFarmerApp() {
               nickname={nickname}
               balance={balance}
               level={level}
+              activePanel={panel}
+              packageCount={packages.length}
               onModelChange={setModelId}
               onOpenPanel={setPanel}
               onOpenSocial={() => setPanel('social')}
               muted={muted}
               onToggleAudio={toggleMuted}
+              musicMuted={musicMuted}
+              onToggleMusic={toggleMusic}
             />
             <main className={sidebarCollapsed ? 'game-main sidebar-collapsed' : 'game-main'}>
               <section className="farm-stage">
@@ -319,7 +292,23 @@ export function TokenFarmerApp() {
                     visitingFriend ? `${visitingFriend.name}的 Token 农场` : '晨露 Token 农场'
                   }
                   friendFarm={Boolean(visitingFriend)}
+                  overview={overview}
+                  onAction={(tool) => {
+                    if (tool === 'seed') return setActiveTool('seed');
+                    handlePlotClick(selectedPlotId, tool);
+                  }}
                 />
+                {!visitingFriend && (
+                  <FarmGuide
+                    overview={overview}
+                    packageCount={packages.length}
+                    onWarehouse={() => setPanel('warehouse')}
+                    onLocate={(tool, plotId) => {
+                      setSelectedPlotId(plotId);
+                      setActiveTool(tool === 'seed' ? 'seed' : 'inspect');
+                    }}
+                  />
+                )}
                 {visitingFriend ? (
                   <FriendVisitBar
                     friend={visitingFriend}
@@ -338,6 +327,7 @@ export function TokenFarmerApp() {
                     activeTool={activeTool}
                     level={level}
                     selectedCrop={selectedCrop}
+                    matureCount={overview.matureIds.length}
                     onToolChange={setActiveTool}
                     onSelectCrop={(crop) => {
                       setSelectedCrop(crop);

@@ -1,4 +1,4 @@
-﻿.game-shell {
+.game-shell {
   width: 100%;
   height: 100%;
   background: #a8c985;
@@ -350,9 +350,6 @@
   width: 100%;
   height: 100%;
   touch-action: none;
-}
-.farm-canvas[data-active-tool]:not([data-active-tool='inspect']) {
-  cursor: none !important;
 }
 .farm-tool-cursor {
   position: absolute;

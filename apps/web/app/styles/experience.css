@@ -1,0 +1,378 @@
+/* Pixel HUD: crisp frames, readable controls, and a clear action hierarchy. */
+.game-shell {
+  --hud-surface: #182e29;
+  --hud-border: #526b50;
+  --hud-gold: #f4d477;
+}
+.top-bar {
+  background: #122820;
+  border-bottom: 3px solid #c5ad64;
+}
+.game-main {
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+}
+.friend-sidebar,
+.friend-list {
+  min-height: 0;
+}
+.top-brand-name {
+  letter-spacing: 1px;
+}
+.primary-nav {
+  gap: 6px;
+}
+.primary-nav button {
+  position: relative;
+  min-height: 46px;
+  border: 1px solid transparent;
+  transition:
+    background 120ms,
+    border-color 120ms;
+}
+.primary-nav button:hover,
+.primary-nav button[aria-pressed='true'] {
+  color: #ffe8a2;
+  background: #2b4635;
+  border-color: #8f9259;
+  box-shadow: inset 0 -3px 0 #d6b35f;
+}
+.nav-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 16px;
+  padding: 2px 4px;
+  color: #203025;
+  background: #f4d477;
+  border: 1px solid #6b582c;
+  font-size: 10px;
+  line-height: 12px;
+}
+.level-resource {
+  display: grid;
+  gap: 3px;
+}
+.level-resource small {
+  color: #aac4b2;
+  font-size: 10px;
+}
+.farm-title-hud {
+  top: 18px;
+  left: 18px;
+  min-height: 66px;
+  padding: 12px 16px;
+  background: var(--hud-surface);
+  border: 2px solid var(--hud-border);
+  border-radius: 0;
+  box-shadow:
+    0 4px 0 #0d211a,
+    inset 0 0 0 1px #243f31;
+}
+.farm-title-hud h1 {
+  font-size: 17px;
+}
+.farm-title-hud > span {
+  font-size: 12px;
+}
+.farm-title-hud .section-kicker {
+  letter-spacing: 1.4px;
+  color: #c3d6aa;
+}
+.weather-hud {
+  top: 18px;
+  right: 18px;
+  padding: 12px;
+  border: 2px solid #a48c47;
+  border-radius: 0;
+  box-shadow: 0 4px 0 #66552c;
+}
+.farm-guide {
+  position: absolute;
+  z-index: 4;
+  top: 98px;
+  left: 18px;
+  width: 288px;
+  color: #e7efda;
+  background: var(--hud-surface);
+  border: 2px solid var(--hud-border);
+  box-shadow: 0 4px 0 #10271c;
+}
+.farm-guide header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px;
+  border-bottom: 1px solid #3f5745;
+}
+.farm-guide header strong {
+  font-size: 12px;
+  color: var(--hud-gold);
+}
+.farm-guide header small {
+  margin-left: auto;
+  color: #b5c8b3;
+  font-size: 10px;
+}
+.farm-radar-actions {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+  padding: 9px;
+}
+.farm-radar-actions button {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-height: 66px;
+  padding: 8px 0;
+  color: #e0eed4;
+  background: #283f31;
+  border: 1px solid #50684d;
+  border-radius: 0;
+}
+.farm-radar-actions button b {
+  font-size: 16px;
+  line-height: 1;
+}
+.farm-radar-actions button span {
+  font-size: 10px;
+}
+.farm-radar-actions button:not(:disabled):hover {
+  color: #ffdf84;
+  background: #3b5137;
+  border-color: #d1b264;
+}
+.farm-radar-actions button:disabled {
+  opacity: 0.42;
+}
+.warehouse-shortcut {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 10px;
+  color: #ecd998;
+  background: #273b2a;
+  border: 0;
+  border-top: 1px solid #50604a;
+  font-size: 10px;
+  text-align: left;
+}
+.warehouse-shortcut b {
+  margin-left: auto;
+  white-space: nowrap;
+}
+.warehouse-shortcut:hover {
+  background: #3b4e31;
+}
+.tool-dock {
+  height: 76px;
+  padding: 8px;
+  gap: 5px;
+  color: #e7efda;
+  background: var(--hud-surface);
+  border: 2px solid #afaa72;
+  border-radius: 0;
+  box-shadow:
+    0 5px 0 #10251c,
+    inset 0 0 0 2px #2e4634;
+}
+.tool-button {
+  width: 62px;
+  height: 55px;
+  color: #bed0b5;
+  border: 1px solid #3d5541;
+  border-radius: 0;
+  background: #233b2d;
+}
+.tool-button span {
+  font-size: 12px;
+}
+.tool-button:hover {
+  color: #ffe6a1;
+  background: #3c5033;
+}
+.tool-button.active {
+  color: #253322;
+  background: #f4d477;
+  border-color: #fff0b2;
+  box-shadow: inset 0 -4px 0 #c3a454;
+}
+.tool-separator {
+  background: #526749;
+}
+.tool-status {
+  position: absolute;
+  z-index: 4;
+  bottom: 24px;
+  left: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 310px;
+  padding: 10px;
+  color: #f0de9d;
+  background: var(--hud-surface);
+  border: 2px solid var(--hud-border);
+  box-shadow: 0 4px 0 #10271c;
+  pointer-events: none;
+}
+.tool-status span {
+  display: grid;
+  gap: 5px;
+}
+.tool-status strong {
+  font-size: 12px;
+}
+.tool-status small {
+  font-size: 10px;
+  color: #c2d3b8;
+}
+.batch-command {
+  font-size: 12px;
+  border-radius: 0;
+}
+.plot-inspector {
+  right: 20px;
+  bottom: 110px;
+  height: auto;
+  min-height: 66px;
+  max-width: calc(100% - 40px);
+  background: var(--hud-surface);
+  border: 2px solid var(--hud-border);
+  border-radius: 0;
+  box-shadow: 0 4px 0 #10271c;
+}
+.plot-main-meta strong,
+.plot-inspector > span strong {
+  font-size: 12px;
+}
+.plot-number {
+  color: #f4d477;
+  font-size: 12px;
+}
+.plot-action {
+  min-height: 38px;
+  padding: 6px 12px;
+  color: #233722;
+  background: #efd477;
+  border: 2px solid #fff0b2;
+  box-shadow: inset 0 -3px 0 #bba353;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.plot-action:hover {
+  background: #ffe9a0;
+}
+.seed-tray {
+  bottom: 110px;
+  border-radius: 0;
+}
+.farm-stage:has(.seed-tray) .plot-inspector {
+  display: none;
+}
+.friend-sidebar {
+  background: #f1f0dd;
+  border-left: 3px solid #687852;
+}
+.friend-heading {
+  padding: 22px 16px 16px;
+}
+.friend-heading h2 {
+  font-size: 18px;
+}
+.friend-heading .section-kicker {
+  letter-spacing: 1.6px;
+}
+.friend-row {
+  min-height: 76px;
+  padding: 12px;
+}
+.friend-meta strong {
+  font-size: 13px;
+}
+.friend-meta small,
+.friend-status {
+  font-size: 11px;
+}
+.friend-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 0;
+}
+.visit-button {
+  width: 32px;
+  height: 36px;
+  border-radius: 0;
+}
+.friend-search:focus-within {
+  outline: 2px solid #4b815f;
+  outline-offset: 2px;
+}
+.friend-search-empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 36px 12px;
+  color: #5d715a;
+  font-size: 12px;
+}
+.friend-search-empty button {
+  padding: 8px 16px;
+  background: #e1e8d5;
+  border: 1px solid #99af8c;
+}
+.game-toast {
+  top: 98px;
+  pointer-events: none;
+  border: 2px solid #afd098;
+  border-radius: 0;
+  font-size: 12px;
+}
+.game-panel {
+  border-radius: 0;
+  border: 3px solid #648057;
+  box-shadow:
+    0 7px 0 #142e21,
+    0 24px 80px #10251c66;
+}
+.game-shell :is(button, input, select):focus-visible {
+  outline: 3px solid #e6b84b;
+  outline-offset: 3px;
+}
+@media (max-width: 1399px) {
+  .primary-nav button span {
+    display: block;
+    font-size: 10px;
+  }
+  .primary-nav button {
+    min-width: 44px;
+  }
+  .farm-title-hud {
+    gap: 9px;
+    padding: 10px;
+  }
+  .farm-title-hud h1 {
+    font-size: 15px;
+  }
+  .farm-title-hud > span {
+    font-size: 11px;
+  }
+  .tool-button {
+    width: 56px;
+  }
+  .weather-hud {
+    min-width: 115px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-shell *,
+  .game-shell *::before,
+  .game-shell *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

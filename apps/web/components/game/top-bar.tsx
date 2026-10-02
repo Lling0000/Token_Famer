@@ -6,6 +6,7 @@ import {
   CircleUserRound,
   KeyRound,
   ListChecks,
+  Music2,
   Settings,
   ShoppingBasket,
   Sprout,
@@ -21,11 +22,15 @@ interface TopBarProps {
   balance: bigint;
   nickname: string;
   level: number;
+  activePanel: GamePanel;
+  packageCount: number;
   onModelChange: (modelId: ModelId) => void;
   onOpenPanel: (panel: Exclude<GamePanel, null>) => void;
   onOpenSocial: () => void;
   muted: boolean;
   onToggleAudio: () => void;
+  musicMuted: boolean;
+  onToggleMusic: () => void;
 }
 
 const NAV_ITEMS = [
@@ -42,11 +47,15 @@ export function TopBar({
   balance,
   nickname,
   level,
+  activePanel,
+  packageCount,
   onModelChange,
   onOpenPanel,
   onOpenSocial,
   muted,
   onToggleAudio,
+  musicMuted,
+  onToggleMusic,
 }: TopBarProps) {
   return (
     <header className="top-bar">
@@ -67,22 +76,42 @@ export function TopBar({
       <div className="resource-strip" aria-label="农场资源">
         <span className="resource-item level-resource">
           <b>LV.{level}</b>
-          <span className="level-track">
-            <i style={{ width: '68%' }} />
-          </span>
+          <small>农场等级</small>
         </span>
       </div>
 
       <nav className="primary-nav" aria-label="主要功能">
         {NAV_ITEMS.map(({ panel, label, Icon }) => (
-          <button type="button" key={panel} onClick={() => onOpenPanel(panel)} title={label}>
+          <button
+            type="button"
+            key={panel}
+            onClick={() => onOpenPanel(panel)}
+            title={label}
+            aria-label={label}
+            aria-pressed={activePanel === panel}
+          >
             <Icon size={18} />
             <span>{label}</span>
+            {panel === 'warehouse' && packageCount > 0 && (
+              <b className="nav-badge" aria-label={`${packageCount} 个待激活包`}>
+                {packageCount}
+              </b>
+            )}
           </button>
         ))}
       </nav>
 
       <div className="profile-controls">
+        <button
+          className="icon-button audio-toggle"
+          type="button"
+          aria-label={musicMuted ? '开启背景音乐' : '关闭背景音乐'}
+          title={musicMuted ? '开启背景音乐' : '关闭背景音乐'}
+          aria-pressed={musicMuted}
+          onClick={onToggleMusic}
+        >
+          <Music2 size={18} />
+        </button>
         <button
           className="icon-button audio-toggle"
           type="button"
